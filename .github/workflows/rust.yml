@@ -1,10 +1,6 @@
 name: Rust
 
 on: [push, pull_request]
-  # push:
-  #   branches: [ main ]
-  # pull_request:
-  #   branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -49,20 +45,20 @@ jobs:
         with:
           command: test
 
-  nightly-lints:
+  lints:
     name: Clippy + rustfmt
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Install nightly toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-          components: rustfmt, clippy
+      # - name: Install nightly toolchain
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #     profile: minimal
+      #     toolchain: nightly
+      #     override: true
+      #     components: rustfmt, clippy
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1

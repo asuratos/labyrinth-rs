@@ -13,7 +13,8 @@ name = "demo"
 test = true
 
 [dependencies]
-bracket-geometry = "*"
+serde = {version = "*", features = ["derive"]}
+bracket-geometry = {version = "*", features = ["serde"]}
 
 [dev-dependencies]
 bracket-terminal = "*"

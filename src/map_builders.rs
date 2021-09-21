@@ -2,36 +2,53 @@ use bracket_geometry::prelude::Point;
 
 use std::collections::HashMap;
 
+#[derive(Clone, Copy)]
+pub enum TileType {
+    Floor,
+    Wall,
+    Entrance,
+    Exit,
+}
 
 pub struct FinishedMap {
-    map: Vec<u8>,
-    width: u8,
-    height: u8,
-    start: Point,
-    end: Point,
+    map: Vec<TileType>,
+    width: usize,
+    height: usize,
     // entities: Option<HashMap<String, Point>>,
     // TODO: allow the builder to populate the map
 }
 
 pub trait MapBuilder {
-    fn build(self) -> FinishedMap;
+    fn build(&mut self) -> FinishedMap;
 }
 
 mod builder2d {
-    use super::{MapBuilder, FinishedMap, Point};
+    use super::{FinishedMap, MapBuilder, TileType};
 
     /// Builder Class for 2D Maps
     ///
-    pub struct MapBuilder2D { }
+    pub struct MapBuilder2D {
+        map: Vec<TileType>,
+        width: usize,
+        height: usize,
+    }
 
     impl MapBuilder for MapBuilder2D {
-        fn build(self) -> FinishedMap {
+        fn build(&mut self) -> FinishedMap {
             FinishedMap {
-                map: vec![0],
-                width: 80,
-                height: 60,
-                start: Point::new(0,0),
-                end: Point::new(0,0)
+                map: self.map.to_owned(),
+                width: self.width,
+                height: self.height,
+            }
+        }
+    }
+
+    impl MapBuilder2D {
+        fn new(width: usize, height: usize) -> MapBuilder2D {
+            MapBuilder2D {
+                map: vec![TileType::Floor; width*height],
+                width: width,
+                height: height,
             }
         }
     }
