@@ -13,6 +13,7 @@ name = "demo"
 test = true
 
 [dependencies]
+bracket-geometry = "*"
 
 [dev-dependencies]
 bracket-terminal = "*"

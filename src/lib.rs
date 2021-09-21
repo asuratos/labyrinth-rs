@@ -1,3 +1,5 @@
+mod map_builders;
+
 #[cfg(test)]
 mod tests {
     #[test]
