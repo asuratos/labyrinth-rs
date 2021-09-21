@@ -46,7 +46,7 @@ mod builder2d {
     impl MapBuilder2D {
         fn new(width: usize, height: usize) -> MapBuilder2D {
             MapBuilder2D {
-                map: vec![TileType::Floor; width*height],
+                map: vec![TileType::Floor; width * height],
                 width: width,
                 height: height,
             }
