@@ -15,6 +15,7 @@ test = true
 [dependencies]
 serde = {version = "*", features = ["derive"]}
 bracket-geometry = {version = "*", features = ["serde"]}
+bracket-pathfinding = "*"
 
 [dev-dependencies]
 bracket-terminal = "*"
