@@ -1,6 +1,6 @@
 //! Module for map objects
 
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 use bracket_pathfinding::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -13,12 +13,12 @@ pub(crate) struct MoveProperties {
     walk: bool,
     fly: bool,
     swim: bool,
-    custom: HashMap<String, bool>,
+    other: HashMap<String, bool>,
 }
 
 // Builder struct for tiles
 // will fail if required fields (everything except custom_properties) is None
-pub(crate) struct TileBuilder {
+pub struct TileBuilder {
     kind: Option<String>,
     opaque: Option<bool>,
     walk: Option<bool>,
@@ -39,44 +39,78 @@ impl TileBuilder {
         }
     }
 
-    pub fn template_wall() -> TileBuilder {
-        let mut builder = TileBuilder::new();
-
-        builder = builder.add_kind("wall").unwrap();
-        builder = builder.add_property("opaque", true).unwrap();
-        builder = builder.add_property("walk", false).unwrap();
-        builder = builder.add_property("swim", false).unwrap();
-        builder.add_property("fly", false).unwrap()
+    pub fn wall() -> TileBuilder {
+        TileBuilder::new()
+            .kind("wall")
+            .opaque(true)
+            .walk(false)
+            .fly(false)
+            .swim(false)
     }
 
-    pub fn add_kind(mut self, kind: &str) -> Result<TileBuilder, String> {
-        // TODO: fail on wrong/bad input
+    pub fn floor() -> TileBuilder {
+        TileBuilder::new()
+            .kind("floor")
+            .opaque(false)
+            .walk(true)
+            .fly(true)
+            .swim(true)
+    }
 
+    pub fn water() -> TileBuilder {
+        TileBuilder::new()
+            .kind("water")
+            .opaque(false)
+            .walk(false)
+            .fly(true)
+            .swim(true)
+    }
+
+    pub fn lava() -> TileBuilder {
+        TileBuilder::new()
+            .kind("lava")
+            .opaque(false)
+            .walk(false)
+            .fly(true)
+            .swim(false)
+    }
+
+    pub fn kind(mut self, kind: &str) -> TileBuilder {
         let kind = kind.to_lowercase();
         self.kind = Some(kind);
 
-        Ok(self)
+        self
     }
 
-    pub fn add_property(mut self, prop: &str, value: bool) -> Result<TileBuilder, String> {
-        // TODO: fail if input is wrong
+    pub fn opaque(mut self, value: bool) -> TileBuilder {
+        self.opaque = Some(value);
+        self
+    }
 
+    pub fn walk(mut self, value: bool) -> TileBuilder {
+        self.walk = Some(value);
+        self
+    }
+
+    pub fn fly(mut self, value: bool) -> TileBuilder {
+        self.fly = Some(value);
+        self
+    }
+
+    pub fn swim(mut self, value: bool) -> TileBuilder {
+        self.swim = Some(value);
+        self
+    }
+
+    pub fn property(mut self, prop: &str, value: bool) -> TileBuilder {
         let prop = prop.to_lowercase();
         let lcase_prop = prop.as_str();
 
-        match lcase_prop {
-            "opaque" => self.opaque = Some(value),
-            "walk" => self.walk = Some(value),
-            "fly" => self.fly = Some(value),
-            "swim" => self.swim = Some(value),
-            _ => {
-                self.custom_properties
-                    .entry(lcase_prop.to_string())
-                    .or_insert(value);
-            }
-        }
+        self.custom_properties
+            .entry(lcase_prop.to_string())
+            .or_insert(value);
 
-        Ok(self)
+        self
     }
 
     pub fn is_fully_initialized(&self) -> bool {
@@ -104,6 +138,7 @@ pub struct Tile {
     pub walk: bool,
     pub fly: bool,
     pub swim: bool,
+    pub other_movement: HashMap<String, bool>,
 }
 
 impl Default for Tile {
@@ -121,6 +156,7 @@ impl Tile {
             walk: false,
             fly: false,
             swim: false,
+            other_movement: HashMap::new(),
         }
     }
 
@@ -131,6 +167,7 @@ impl Tile {
             walk: true,
             fly: true,
             swim: false,
+            other_movement: HashMap::new(),
         }
     }
 
@@ -141,6 +178,7 @@ impl Tile {
             walk: false,
             fly: true,
             swim: true,
+            other_movement: HashMap::new(),
         }
     }
 
@@ -151,18 +189,17 @@ impl Tile {
             walk: false,
             fly: true,
             swim: false,
+            other_movement: HashMap::new(),
         }
     }
 
     // property getters
-    // TODO: figure out what kind of representation I want for tile properties
     pub(crate) fn move_properties(&self) -> MoveProperties {
         MoveProperties {
             walk: self.walk,
             fly: self.fly,
             swim: self.swim,
-            // TODO: add custom bits
-            custom: HashMap::new(),
+            other: self.other_movement.clone(),
         }
     }
 }
@@ -256,28 +293,33 @@ impl Map {
 
     /// Find the path from start to end by flying
     pub fn find_path_fly(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path_alternate(start, end, "fly")
+        self.find_path_alternate(start, end, "fly").unwrap()
     }
 
     /// Find the path from start to end by swimming
     pub fn find_path_swim(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path_alternate(start, end, "swim")
+        self.find_path_alternate(start, end, "swim").unwrap()
     }
 
-    fn find_path_alternate(&mut self, start: Point, end: Point, move_type: &str) -> NavigationPath {
-        // TODO: this should error on bad input
+    fn find_path_alternate(
+        &mut self,
+        start: Point,
+        end: Point,
+        move_type: &str,
+        // TODO: change this to use MoveProperties struct?
+    ) -> Result<NavigationPath, String> {
         if move_type == "walk" {
-            return self.find_path_walk(start, end);
+            return Ok(self.find_path_walk(start, end));
         }
 
         let internal_map: &MapInternal;
-        // Check if pathfinding over the movement type has been done before
 
+        // Check if pathfinding over the movement type has been done before
         if !self.pathfinding_cache.contains_key(move_type) {
             // if not, then add it to the cache
             self.pathfinding_cache.insert(
                 move_type.to_string(),
-                MapInternal::from_map(self, move_type),
+                MapInternal::from_map(self, move_type)?,
             );
         }
 
@@ -285,20 +327,17 @@ impl Map {
         internal_map = self.pathfinding_cache.get(move_type).unwrap();
 
         // then pathfind over it and return the path
-        a_star_search(
+        Ok(a_star_search(
             internal_map.point2d_to_index(start),
             internal_map.point2d_to_index(end),
             internal_map,
-        )
+        ))
     }
 }
 
 // Internal Map struct for pathfinding using alternate movement types.
 // When calling a pathfinding function for swim or fly on the Map struct,
 // it generates one of these and pathfinds over that.
-// TODO: if multiple fliers have to pathfind, multiple projections are created.
-//     This may not be a problem if we assume the maps will be small,
-//     or enemies few.
 #[derive(Serialize, Deserialize, Clone)]
 struct MapInternal {
     opaque: Vec<bool>,
@@ -307,28 +346,32 @@ struct MapInternal {
 }
 
 impl MapInternal {
-    fn from_map(map: &Map, move_type: &str) -> MapInternal {
+    fn from_map(map: &Map, move_type: &str) -> Result<MapInternal, String> {
         // TODO: what about things that can both fly and swim?
         //      This should be a bitwise OR over the movers movement options
-        let enterable: Result<Vec<bool>, &str> = map
+        let enterable = map
             .tiles
             .iter()
             .map(|tile| match move_type {
                 "fly" => Ok(tile.fly),
                 "swim" => Ok(tile.swim),
-                _ => Err("Invalid movement type"),
+                other => {
+                    // if not either fly or swim, then check if the tiles have it
+                    tile.other_movement
+                        .get(other)
+                        .copied()
+                        .ok_or("Specified movement type undefined for some tiles".to_string())
+                }
             })
-            .collect();
-
-        // TODO: error handling here
+            .collect::<Result<Vec<bool>, String>>()?;
 
         let opaque: Vec<bool> = map.tiles.iter().map(|tile| tile.opaque).collect();
 
-        MapInternal {
+        Ok(MapInternal {
             opaque: opaque,
-            enterable: enterable.unwrap(),
+            enterable: enterable,
             dimensions: map.dimensions(),
-        }
+        })
     }
 }
 
@@ -378,7 +421,7 @@ mod tests {
     // Tile tests
     #[test]
     fn tile_creation_from_wall_template() {
-        let builder = TileBuilder::template_wall();
+        let builder = TileBuilder::wall();
         let tile = builder.build().unwrap();
 
         // assert that it's a wall
@@ -389,7 +432,7 @@ mod tests {
                 walk: false,
                 fly: false,
                 swim: false,
-                custom: HashMap::new(),
+                other: HashMap::new(),
             }
         );
     }
@@ -402,13 +445,12 @@ mod tests {
     }
 
     #[test]
-    fn tiles_with_diff_kind_can_still_have_same_properties() {
-        let mut builder = TileBuilder::template_wall();
-        builder = builder.add_kind("smoothwall").unwrap();
-        let custom_tile = builder.build().unwrap();
+    fn tiles_with_diff_kind_can_still_have_same_properties() -> Result<(), String> {
+        let custom_tile = TileBuilder::wall().kind("smoothwall").build()?;
 
         let wall = Tile::wall();
 
         assert_eq!(wall.move_properties(), custom_tile.move_properties());
+        Ok(())
     }
 }
