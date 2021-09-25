@@ -5,6 +5,97 @@ use std::collections::HashMap;
 use bracket_pathfinding::prelude::*;
 use serde::{Deserialize, Serialize};
 
+// Helper struct for the movement properties of a tile
+// Has boolean values for movement types, as well as fields for adding
+// custom movement types
+#[derive(Debug, PartialEq)]
+pub(crate) struct MoveProperties {
+    walk: bool,
+    fly: bool,
+    swim: bool,
+    custom: HashMap<String, bool>,
+}
+
+// Builder struct for tiles
+// will fail if required fields (everything except custom_properties) is None
+pub(crate) struct TileBuilder {
+    kind: Option<String>,
+    opaque: Option<bool>,
+    walk: Option<bool>,
+    fly: Option<bool>,
+    swim: Option<bool>,
+    custom_properties: HashMap<String, bool>,
+}
+
+impl TileBuilder {
+    pub fn new() -> TileBuilder {
+        TileBuilder {
+            kind: None,
+            opaque: None,
+            walk: None,
+            fly: None,
+            swim: None,
+            custom_properties: HashMap::new(),
+        }
+    }
+
+    pub fn template_wall() -> TileBuilder {
+        let mut builder = TileBuilder::new();
+
+        builder = builder.add_kind("wall").unwrap();
+        builder = builder.add_property("opaque", true).unwrap();
+        builder = builder.add_property("walk", false).unwrap();
+        builder = builder.add_property("swim", false).unwrap();
+        builder.add_property("fly", false).unwrap()
+    }
+
+    pub fn add_kind(mut self, kind: &str) -> Result<TileBuilder, String> {
+        // TODO: fail on wrong/bad input
+
+        let kind = kind.to_lowercase();
+        self.kind = Some(kind);
+
+        Ok(self)
+    }
+
+    pub fn add_property(mut self, prop: &str, value: bool) -> Result<TileBuilder, String> {
+        // TODO: fail if input is wrong
+
+        let prop = prop.to_lowercase();
+        let lcase_prop = prop.as_str();
+
+        match lcase_prop {
+            "opaque" => self.opaque = Some(value),
+            "walk" => self.walk = Some(value),
+            "fly" => self.fly = Some(value),
+            "swim" => self.swim = Some(value),
+            _ => {
+                self.custom_properties
+                    .entry(lcase_prop.to_string())
+                    .or_insert(value);
+            }
+        }
+
+        Ok(self)
+    }
+
+    pub fn is_fully_initialized(&self) -> bool {
+        self.kind.is_some()
+            && self.opaque.is_some()
+            && self.walk.is_some()
+            && self.fly.is_some()
+            && self.swim.is_some()
+    }
+
+    pub fn build(self) -> Result<Tile, String> {
+        if !self.is_fully_initialized() {
+            Err("Builder is not fully initialized!".to_string())
+        } else {
+            Ok(Tile::default())
+        }
+    }
+}
+
 /// Tile struct that contains the tile type and its properties
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
@@ -65,8 +156,14 @@ impl Tile {
 
     // property getters
     // TODO: figure out what kind of representation I want for tile properties
-    pub fn move_properties(&self) -> (bool, bool, bool) {
-        (self.walk, self.fly, self.swim)
+    pub(crate) fn move_properties(&self) -> MoveProperties {
+        MoveProperties {
+            walk: self.walk,
+            fly: self.fly,
+            swim: self.swim,
+            // TODO: add custom bits
+            custom: HashMap::new(),
+        }
     }
 }
 
@@ -279,4 +376,39 @@ mod tests {
     use super::*;
 
     // Tile tests
+    #[test]
+    fn tile_creation_from_wall_template() {
+        let builder = TileBuilder::template_wall();
+        let tile = builder.build().unwrap();
+
+        // assert that it's a wall
+        assert_eq!(tile.opaque, true);
+        assert_eq!(
+            tile.move_properties(),
+            MoveProperties {
+                walk: false,
+                fly: false,
+                swim: false,
+                custom: HashMap::new(),
+            }
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn unfinished_builder_should_panic() {
+        let builder = TileBuilder::new();
+        builder.build().unwrap();
+    }
+
+    #[test]
+    fn tiles_with_diff_kind_can_still_have_same_properties() {
+        let mut builder = TileBuilder::template_wall();
+        builder = builder.add_kind("smoothwall").unwrap();
+        let custom_tile = builder.build().unwrap();
+
+        let wall = Tile::wall();
+
+        assert_eq!(wall.move_properties(), custom_tile.move_properties());
+    }
 }
