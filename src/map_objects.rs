@@ -20,7 +20,7 @@ pub enum MoveType {
     Walk,
     Fly,
     Swim,
-    Custom(String)
+    Custom(String),
 }
 // Builder struct for tiles
 // will fail if required fields (everything except custom_properties) is None
