@@ -16,6 +16,12 @@ pub(crate) struct MoveProperties {
     other: HashMap<String, bool>,
 }
 
+pub enum MoveType {
+    Walk,
+    Fly,
+    Swim,
+    Custom(String)
+}
 // Builder struct for tiles
 // will fail if required fields (everything except custom_properties) is None
 pub struct TileBuilder {
@@ -191,6 +197,13 @@ impl Tile {
             swim: false,
             other_movement: HashMap::new(),
         }
+    }
+
+    // this determines if an entity with a given set of movement types can
+    // enter this tile.
+    pub fn can_enter(&self, move_types: Vec<MoveType>) -> bool {
+        todo!("Implement this");
+        false
     }
 
     // property getters
