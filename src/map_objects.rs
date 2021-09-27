@@ -24,6 +24,7 @@ pub enum MoveType {
     Custom(String),
 }
 
+// TODO: Map struct documentation
 /// 2D Map struct, the output of the MapGenerator2D.
 ///
 /// Implements Algorithm2D and BaseMap traits from bracket-pathfinding,
@@ -38,9 +39,8 @@ pub enum MoveType {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Map {
     /// The vector of tiles in the map.
-    pub tiles: Vec<Tile>,
+    tiles: Vec<Tile>,
     dimensions: Point,
-    // TODO: If any changes happen to the map, the cache MUST be cleared.
     pathfinding_cache: HashMap<Vec<MoveType>, MapInternal>,
 }
 
@@ -85,7 +85,7 @@ impl BaseMap for Map {
 }
 
 impl Map {
-    // Constructors
+    // ------------------ Constructors ---------------------------
     /// Constructs a new map with the passed width and height values.
     ///
     /// Initial Tiles are all walls.
@@ -108,7 +108,7 @@ impl Map {
         }
     }
 
-    // Pathfinding functions
+    // -------------------- Pathfinding functions -----------------
     /// Find the path between two [`Points`](Point) by walking
     pub fn find_path_walk(&self, start: Point, end: Point) -> NavigationPath {
         a_star_search(
@@ -172,7 +172,8 @@ impl Map {
         ))
     }
 
-    /// Returns Dijkstra map
+    /// Returns Dijkstra map for a set of starting [`Points`](Point), given
+    /// the movement types of the entity.
     pub fn dijkstra_map(
         &mut self,
         starts: &[Point],
@@ -223,6 +224,34 @@ impl Map {
     /// Constructs the Dijkstra map for an entity that can only fly
     pub fn dijkstra_map_swim(&mut self, starts: &[Point]) -> DijkstraMap {
         self.dijkstra_map(starts, &[MoveType::Swim]).unwrap()
+    }
+
+    // ---------------- Map editing methods --------------
+    /// Sets the tile at the given [`Point`](Point) to a [`Tile`].
+    pub fn set_tile_at(&mut self, loc: Point, tile: Tile) {
+        let idx = self.point2d_to_index(loc);
+        self.tiles[idx] = tile;
+        self.pathfinding_cache.clear();
+    }
+
+    /// Sets the tile at the given [`Point`](Point) to a basic floor.
+    pub fn set_floor(&mut self, loc: Point) {
+        self.set_tile_at(loc, Tile::floor());
+    }
+
+    /// Sets the tile at the given [`Point`](Point) to a basic wall.
+    pub fn set_wall(&mut self, loc: Point) {
+        self.set_tile_at(loc, Tile::wall());
+    }
+
+    /// Sets the tile at the given [`Point`](Point) to a basic water tile.
+    pub fn set_water(&mut self, loc: Point) {
+        self.set_tile_at(loc, Tile::water());
+    }
+
+    /// Sets the tile at the given [`Point`](Point) to a basic lava tile.
+    pub fn set_lava(&mut self, loc: Point) {
+        self.set_tile_at(loc, Tile::lava());
     }
 }
 
@@ -374,5 +403,30 @@ mod tests {
         let _path = map.find_path_fly(start, end);
 
         assert_eq!(map.pathfinding_cache.len(), 1);
+    }
+
+    // Map editing tests
+    #[test]
+    fn editing_map_clears_cache() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+        let end = Point::new(5, 5);
+
+        let mut _path = map.find_path_fly(start, end);
+
+        assert_eq!(map.pathfinding_cache.len(), 1);
+
+        map.set_tile_at(Point::new(3, 3), Tile::wall());
+
+        assert_eq!(map.pathfinding_cache.len(), 0);
+
+        _path = map.find_path_fly(start, end);
+
+        assert_eq!(map.pathfinding_cache.len(), 1);
+
+        map.dig(Point::new(3, 3));
+
+        assert_eq!(map.pathfinding_cache.len(), 0);
     }
 }
