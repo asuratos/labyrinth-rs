@@ -128,20 +128,7 @@ impl Map {
         self.find_path(start, end, &[MoveType::Swim]).unwrap()
     }
 
-    /// Find the path between two [`Points`](Point) for an entity with multiple
-    /// movement types.
-    pub fn find_path(
-        &mut self,
-        start: Point,
-        end: Point,
-        move_types: &[MoveType],
-    ) -> Result<NavigationPath, String> {
-        if move_types == &[MoveType::Walk] {
-            return Ok(self.find_path_walk(start, end));
-        }
-
-        let internal_map: &MapInternal;
-
+    fn get_from_cache_or_add(&mut self, move_types: &[MoveType]) -> Result<&MapInternal, String> {
         // Check if pathfinding over the movement type has been done before
         let mut move_types_vec = move_types.to_vec();
         move_types_vec.sort();
@@ -155,7 +142,27 @@ impl Map {
         }
 
         // then get the map from the cache
-        internal_map = self.pathfinding_cache.get(&move_types_vec).unwrap();
+        self.pathfinding_cache
+            .get(&move_types_vec)
+            .ok_or("Unable to get from cache".to_string())
+    }
+
+    /// Find the path between two [`Points`](Point) for an entity with multiple
+    /// movement types.
+    pub fn find_path(
+        &mut self,
+        start: Point,
+        end: Point,
+        move_types: &[MoveType],
+    ) -> Result<NavigationPath, String> {
+        // If the movetype is only walk, then pathfinding can be done on
+        // the Map as-is
+        if move_types == [MoveType::Walk] {
+            return Ok(self.find_path_walk(start, end));
+        }
+
+        // Get the map from the cache if it exists, add it otherwise
+        let internal_map = self.get_from_cache_or_add(move_types)?;
 
         // then pathfind over it and return the path
         Ok(a_star_search(
@@ -163,6 +170,59 @@ impl Map {
             internal_map.point2d_to_index(end),
             internal_map,
         ))
+    }
+
+    /// Returns Dijkstra map
+    pub fn dijkstra_map(
+        &mut self,
+        starts: &[Point],
+        move_types: &[MoveType],
+    ) -> Result<DijkstraMap, String> {
+        // if the MoveType is only walk, then it can be done on the map itself
+        if move_types == [MoveType::Walk] {
+            return Ok(self.dijkstra_map_walk(starts));
+        }
+
+        let Point {
+            x: size_x,
+            y: size_y,
+        } = self.dimensions;
+
+        let starts_idx: Vec<usize> = starts.iter().map(|&pt| self.point2d_to_index(pt)).collect();
+
+        // Get the map from the cache if it exists, add it otherwise
+        let internal_map = self.get_from_cache_or_add(move_types)?;
+
+        // Finally, return the Dijkstra map over that internal projection
+        Ok(DijkstraMap::new(
+            size_x,
+            size_y,
+            &starts_idx,
+            internal_map,
+            1024.0,
+        ))
+    }
+
+    /// Constructs the Dijkstra map for an entity that can only walk
+    pub fn dijkstra_map_walk(&self, starts: &[Point]) -> DijkstraMap {
+        let Point {
+            x: size_x,
+            y: size_y,
+        } = self.dimensions;
+
+        let starts_idx: Vec<usize> = starts.iter().map(|&pt| self.point2d_to_index(pt)).collect();
+
+        DijkstraMap::new(size_x, size_y, &starts_idx, self, 1024.0)
+    }
+
+    /// Constructs the Dijkstra map for an entity that can only fly
+    pub fn dijkstra_map_fly(&mut self, starts: &[Point]) -> DijkstraMap {
+        self.dijkstra_map(starts, &[MoveType::Fly]).unwrap()
+    }
+
+    /// Constructs the Dijkstra map for an entity that can only fly
+    pub fn dijkstra_map_swim(&mut self, starts: &[Point]) -> DijkstraMap {
+        self.dijkstra_map(starts, &[MoveType::Swim]).unwrap()
     }
 }
 
@@ -237,6 +297,7 @@ impl BaseMap for MapInternal {
 mod tests {
     use super::*;
 
+    // Pathfinding tests
     #[test]
     fn pathfinding_adds_to_map_cache() {
         let mut map = Map::new(10, 10);
@@ -276,6 +337,42 @@ mod tests {
         let _path2 = map.find_path(start, end, movetype2);
 
         // The second one should not be added to the cache (since they're the same)
+        assert_eq!(map.pathfinding_cache.len(), 1);
+    }
+
+    #[test]
+    fn dijkstra_maps_add_to_map_cache() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+
+        let _d_map = map.dijkstra_map_fly(&[start]);
+
+        assert_eq!(map.pathfinding_cache.len(), 1);
+    }
+
+    #[test]
+    fn dijkstra_maps_twice_doesnt_add_to_map_cache() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+
+        let _d_map = map.dijkstra_map_fly(&[start]);
+        let _d_map2 = map.dijkstra_map_fly(&[start]);
+
+        assert_eq!(map.pathfinding_cache.len(), 1);
+    }
+
+    #[test]
+    fn pathfinding_and_dijkstra_maps_share_map_cache() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+        let end = Point::new(5, 5);
+
+        let _d_map = map.dijkstra_map_fly(&[start]);
+        let _path = map.find_path_fly(start, end);
+
         assert_eq!(map.pathfinding_cache.len(), 1);
     }
 }

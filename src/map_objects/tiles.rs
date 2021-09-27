@@ -77,6 +77,12 @@ pub struct TileBuilder {
     pub custom_movetypes: HashMap<String, bool>,
 }
 
+impl Default for TileBuilder {
+    fn default() -> Self {
+        TileBuilder::new()
+    }
+}
+
 impl TileBuilder {
     /// Initializes a TileBuilder with all Option fields set to None.
     pub fn new() -> TileBuilder {
