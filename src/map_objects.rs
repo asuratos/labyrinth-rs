@@ -58,24 +58,28 @@ impl BaseMap for Map {
     }
 
     fn get_available_exits(&self, _idx: usize) -> SmallVec<[(usize, f32); 10]> {
-        let mut neighbors = SmallVec::new();
-
         let start = self.index_to_point2d(_idx);
-        let deltas = &[
+        let deltas = [
             Point::new(-1, 0),
             Point::new(0, -1),
             Point::new(1, 0),
             Point::new(0, 1),
         ];
 
-        for diff in deltas {
-            let neighbor = self.point2d_to_index(start + *diff);
-            if self.tiles[neighbor].walk {
-                neighbors.push((neighbor, 1.0));
-            }
-        }
-
-        neighbors
+        deltas
+            .iter()
+            // apply each delta to the point
+            .map(|&diff| start + diff)
+            // filter to only points in map bounds
+            .filter(|&pt| self.in_bounds(pt))
+            // map points -> vector indices
+            .map(|pt| self.point2d_to_index(pt))
+            // filter to only tiles that are walkable
+            .filter(|&pos| self.tiles[pos].walk)
+            // package into final struct
+            .map(|pos| (pos, 1.0))
+            // finally, collect into the final SmallVec
+            .collect::<SmallVec<[(_, _); 10]>>()
     }
 
     fn get_pathing_distance(&self, _idx1: usize, _idx2: usize) -> f32 {
@@ -92,6 +96,17 @@ impl Map {
     pub fn new(width: usize, height: usize) -> Map {
         Map {
             tiles: vec![Default::default(); width * height],
+            dimensions: Point::new(width, height),
+            pathfinding_cache: HashMap::new(),
+        }
+    }
+
+    /// Constructs a new map with the passed width and height values.
+    ///
+    /// Initial Tiles are all floors.
+    pub fn new_empty(width: usize, height: usize) -> Map {
+        Map {
+            tiles: vec![Tile::floor(); width * height],
             dimensions: Point::new(width, height),
             pathfinding_cache: HashMap::new(),
         }
@@ -295,25 +310,29 @@ impl BaseMap for MapInternal {
     }
 
     fn get_available_exits(&self, _idx: usize) -> SmallVec<[(usize, f32); 10]> {
-        // TODO: figure out how to share implementation with the Map struct
-        let mut neighbors = SmallVec::new();
-
+        // TODO: Maybe figure out how to generalize this
         let start = self.index_to_point2d(_idx);
-        let deltas = &[
+        let deltas = [
             Point::new(-1, 0),
             Point::new(0, -1),
             Point::new(1, 0),
             Point::new(0, 1),
         ];
 
-        for diff in deltas {
-            let neighbor = self.point2d_to_index(start + *diff);
-            if self.enterable[neighbor] {
-                neighbors.push((neighbor, 1.0));
-            }
-        }
-
-        neighbors
+        deltas
+            .iter()
+            // apply each delta to the point
+            .map(|&diff| start + diff)
+            // filter to only points in map bounds
+            .filter(|&pt| self.in_bounds(pt))
+            // map points -> vector indices
+            .map(|pt| self.point2d_to_index(pt))
+            // filter to only tiles that are walkable
+            .filter(|&pos| self.enterable[pos])
+            // package into final struct
+            .map(|pos| (pos, 1.0))
+            // finally, collect into the final SmallVec
+            .collect::<SmallVec<[(_, _); 10]>>()
     }
 
     fn get_pathing_distance(&self, _idx1: usize, _idx2: usize) -> f32 {
@@ -325,6 +344,28 @@ impl BaseMap for MapInternal {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Trait implementation tests
+    fn count_neighbors(map: &Map, idx: usize) -> usize {
+        map.get_available_exits(idx).len()
+    }
+
+    #[test]
+    fn out_of_bounds_neighbors() {
+        let map = Map::new_empty(3, 3);
+
+        assert_eq!(count_neighbors(&map, 4), 4); // Center
+
+        assert_eq!(count_neighbors(&map, 0), 2); // Upper left corner
+        assert_eq!(count_neighbors(&map, 2), 2); // Upper right corner
+        assert_eq!(count_neighbors(&map, 6), 2); // Lower left corner
+        assert_eq!(count_neighbors(&map, 8), 2); // Lower right corner
+
+        assert_eq!(count_neighbors(&map, 1), 3); // Top edge
+        assert_eq!(count_neighbors(&map, 3), 3); // Left edge
+        assert_eq!(count_neighbors(&map, 5), 3); // Right edge
+        assert_eq!(count_neighbors(&map, 7), 3); // Bottom edge
+    }
 
     // Pathfinding tests
     #[test]
