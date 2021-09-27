@@ -328,6 +328,19 @@ mod tests {
 
     // Pathfinding tests
     #[test]
+    fn pathfinding_walk_doesnt_add_to_map_cache() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+        let end = Point::new(5, 5);
+
+        let mut _path = map.find_path_walk(start, end);
+        _path = map.find_path(start, end, &[MoveType::Walk]).unwrap();
+
+        assert_eq!(map.pathfinding_cache.len(), 0);
+    }
+
+    #[test]
     fn pathfinding_adds_to_map_cache() {
         let mut map = Map::new(10, 10);
 
@@ -367,6 +380,18 @@ mod tests {
 
         // The second one should not be added to the cache (since they're the same)
         assert_eq!(map.pathfinding_cache.len(), 1);
+    }
+
+    #[test]
+    fn dijkstra_maps_walk_dont_add_to_map_cache() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+
+        let mut _d_map = map.dijkstra_map_walk(&[start]);
+        _d_map = map.dijkstra_map(&[start], &[MoveType::Walk]).unwrap();
+
+        assert_eq!(map.pathfinding_cache.len(), 0);
     }
 
     #[test]
@@ -414,19 +439,18 @@ mod tests {
         let end = Point::new(5, 5);
 
         let mut _path = map.find_path_fly(start, end);
-
         assert_eq!(map.pathfinding_cache.len(), 1);
-
         map.set_tile_at(Point::new(3, 3), Tile::wall());
-
         assert_eq!(map.pathfinding_cache.len(), 0);
 
         _path = map.find_path_fly(start, end);
-
         assert_eq!(map.pathfinding_cache.len(), 1);
+        map.set_floor(Point::new(3, 3));
+        assert_eq!(map.pathfinding_cache.len(), 0);
 
-        map.dig(Point::new(3, 3));
-
+        _path = map.find_path_fly(start, end);
+        assert_eq!(map.pathfinding_cache.len(), 1);
+        map.set_lava(Point::new(3, 3));
         assert_eq!(map.pathfinding_cache.len(), 0);
     }
 }
