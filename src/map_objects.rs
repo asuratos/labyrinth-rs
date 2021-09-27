@@ -1,6 +1,6 @@
 //! Module for map objects
 
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
 
 use bracket_pathfinding::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -16,6 +16,7 @@ pub(crate) struct MoveProperties {
     other: HashMap<String, bool>,
 }
 
+#[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Clone)]
 pub enum MoveType {
     Walk,
     Fly,
@@ -201,9 +202,20 @@ impl Tile {
 
     // this determines if an entity with a given set of movement types can
     // enter this tile.
-    pub fn can_enter(&self, move_types: Vec<MoveType>) -> bool {
-        todo!("Implement this");
-        false
+    pub fn can_enter(&self, move_types: &Vec<MoveType>) -> Result<bool, String> {
+        // TODO: This should return a usr-facing error
+        move_types
+            .iter()
+            .map(|move_type| match move_type {
+                MoveType::Walk => Ok(self.walk),
+                MoveType::Fly => Ok(self.fly),
+                MoveType::Swim => Ok(self.swim),
+                MoveType::Custom(custom) => self.other_movement.get(custom).copied().ok_or(
+                    format!("Movement type {} does not exist for this tile", custom),
+                ),
+            }) // Vec<Result<bool, String>>
+            .collect::<Result<Vec<bool>, String>>()
+            .map(|resvec| resvec.iter().any(|res| *res))
     }
 
     // property getters
@@ -233,7 +245,7 @@ pub struct Map {
     pub tiles: Vec<Tile>,
     dimensions: Point,
     // TODO: If any changes happen to the map, the cache MUST be cleared.
-    pathfinding_cache: HashMap<String, MapInternal>,
+    pathfinding_cache: HashMap<Vec<MoveType>, MapInternal>,
 }
 
 // Implementing Algorithm2D from bracket-pathfinding on map
@@ -306,38 +318,40 @@ impl Map {
 
     /// Find the path from start to end by flying
     pub fn find_path_fly(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path_alternate(start, end, "fly").unwrap()
+        self.find_path_alternate(start, end, vec![MoveType::Fly])
+            .unwrap()
     }
 
     /// Find the path from start to end by swimming
     pub fn find_path_swim(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path_alternate(start, end, "swim").unwrap()
+        self.find_path_alternate(start, end, vec![MoveType::Swim])
+            .unwrap()
     }
 
     fn find_path_alternate(
         &mut self,
         start: Point,
         end: Point,
-        move_type: &str,
+        move_types: Vec<MoveType>,
         // TODO: change this to use MoveProperties struct?
     ) -> Result<NavigationPath, String> {
-        if move_type == "walk" {
+        if move_types == vec![MoveType::Walk] {
             return Ok(self.find_path_walk(start, end));
         }
 
         let internal_map: &MapInternal;
 
         // Check if pathfinding over the movement type has been done before
-        if !self.pathfinding_cache.contains_key(move_type) {
+        if !self.pathfinding_cache.contains_key(&move_types) {
             // if not, then add it to the cache
             self.pathfinding_cache.insert(
-                move_type.to_string(),
-                MapInternal::from_map(self, move_type)?,
+                move_types.clone(),
+                MapInternal::from_map(self, &move_types)?,
             );
         }
 
         // then get the map from the cache
-        internal_map = self.pathfinding_cache.get(move_type).unwrap();
+        internal_map = self.pathfinding_cache.get(&move_types).unwrap();
 
         // then pathfind over it and return the path
         Ok(a_star_search(
@@ -359,23 +373,13 @@ struct MapInternal {
 }
 
 impl MapInternal {
-    fn from_map(map: &Map, move_type: &str) -> Result<MapInternal, String> {
+    fn from_map(map: &Map, move_types: &Vec<MoveType>) -> Result<MapInternal, String> {
         // TODO: what about things that can both fly and swim?
         //      This should be a bitwise OR over the movers movement options
         let enterable = map
             .tiles
             .iter()
-            .map(|tile| match move_type {
-                "fly" => Ok(tile.fly),
-                "swim" => Ok(tile.swim),
-                other => {
-                    // if not either fly or swim, then check if the tiles have it
-                    tile.other_movement
-                        .get(other)
-                        .copied()
-                        .ok_or("Specified movement type undefined for some tiles".to_string())
-                }
-            })
+            .map(|tile| tile.can_enter(move_types))
             .collect::<Result<Vec<bool>, String>>()?;
 
         let opaque: Vec<bool> = map.tiles.iter().map(|tile| tile.opaque).collect();
