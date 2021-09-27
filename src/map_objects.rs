@@ -8,11 +8,19 @@ use serde::{Deserialize, Serialize};
 mod tiles;
 pub use tiles::*;
 
-#[derive(PartialEq, Eq, Hash, Serialize, Deserialize, Clone)]
+/// Enum defining possible movement methods
+#[derive(PartialEq, Eq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize, Clone)]
 pub enum MoveType {
+    /// variant for walking
     Walk,
+
+    /// variant for flying
     Fly,
+
+    /// variant for swimming
     Swim,
+
+    /// variant for a user-defined movement type
     Custom(String),
 }
 
@@ -29,6 +37,7 @@ pub enum MoveType {
 /// ```
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Map {
+    /// The vector of tiles in the map.
     pub tiles: Vec<Tile>,
     dimensions: Point,
     // TODO: If any changes happen to the map, the cache MUST be cleared.
@@ -77,6 +86,9 @@ impl BaseMap for Map {
 
 impl Map {
     // Constructors
+    /// Constructs a new map with the passed width and height values.
+    ///
+    /// Initial Tiles are all walls.
     pub fn new(width: usize, height: usize) -> Map {
         Map {
             tiles: vec![Default::default(); width * height],
@@ -85,6 +97,9 @@ impl Map {
         }
     }
 
+    /// Constructs a new map with a size defined by a 2d [`Point`].
+    ///
+    /// Initial Tiles are all walls.
     pub fn new_from_dims(dimensions: Point) -> Map {
         Map {
             tiles: vec![Default::default(); (dimensions.x * dimensions.y) as usize],
@@ -94,7 +109,7 @@ impl Map {
     }
 
     // Pathfinding functions
-    /// Find the path from start to end by walking
+    /// Find the path between two [`Points`](Point) by walking
     pub fn find_path_walk(&self, start: Point, end: Point) -> NavigationPath {
         a_star_search(
             self.point2d_to_index(start),
@@ -103,42 +118,44 @@ impl Map {
         )
     }
 
-    /// Find the path from start to end by flying
+    /// Find the path between two [`Points`](Point) by flying
     pub fn find_path_fly(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path_alternate(start, end, vec![MoveType::Fly])
-            .unwrap()
+        self.find_path(start, end, &[MoveType::Fly]).unwrap()
     }
 
-    /// Find the path from start to end by swimming
+    /// Find the path between two [`Points`](Point) by swimming
     pub fn find_path_swim(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path_alternate(start, end, vec![MoveType::Swim])
-            .unwrap()
+        self.find_path(start, end, &[MoveType::Swim]).unwrap()
     }
 
-    fn find_path_alternate(
+    /// Find the path between two [`Points`](Point) for an entity with multiple
+    /// movement types.
+    pub fn find_path(
         &mut self,
         start: Point,
         end: Point,
-        move_types: Vec<MoveType>,
-        // TODO: change this to use MoveProperties struct?
+        move_types: &[MoveType],
     ) -> Result<NavigationPath, String> {
-        if move_types == vec![MoveType::Walk] {
+        if move_types == &[MoveType::Walk] {
             return Ok(self.find_path_walk(start, end));
         }
 
         let internal_map: &MapInternal;
 
         // Check if pathfinding over the movement type has been done before
-        if !self.pathfinding_cache.contains_key(&move_types) {
+        let mut move_types_vec = move_types.to_vec();
+        move_types_vec.sort();
+
+        if !self.pathfinding_cache.contains_key(&move_types_vec) {
             // if not, then add it to the cache
-            self.pathfinding_cache.insert(
-                move_types.clone(),
-                MapInternal::from_map(self, &move_types)?,
-            );
+
+            let projection = MapInternal::from_map(self, move_types_vec.as_slice())?;
+            self.pathfinding_cache
+                .insert(move_types_vec.clone(), projection);
         }
 
         // then get the map from the cache
-        internal_map = self.pathfinding_cache.get(&move_types).unwrap();
+        internal_map = self.pathfinding_cache.get(&move_types_vec).unwrap();
 
         // then pathfind over it and return the path
         Ok(a_star_search(
@@ -152,7 +169,7 @@ impl Map {
 // Internal Map struct for pathfinding using alternate movement types.
 // When calling a pathfinding function for swim or fly on the Map struct,
 // it generates one of these and pathfinds over that.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct MapInternal {
     opaque: Vec<bool>,
     enterable: Vec<bool>,
@@ -160,9 +177,7 @@ struct MapInternal {
 }
 
 impl MapInternal {
-    fn from_map(map: &Map, move_types: &Vec<MoveType>) -> Result<MapInternal, String> {
-        // TODO: what about things that can both fly and swim?
-        //      This should be a bitwise OR over the movers movement options
+    fn from_map(map: &Map, move_types: &[MoveType]) -> Result<MapInternal, String> {
         let enterable = map
             .tiles
             .iter()
@@ -215,5 +230,52 @@ impl BaseMap for MapInternal {
     fn get_pathing_distance(&self, _idx1: usize, _idx2: usize) -> f32 {
         DistanceAlg::Pythagoras
             .distance2d(self.index_to_point2d(_idx1), self.index_to_point2d(_idx2))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pathfinding_adds_to_map_cache() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+        let end = Point::new(5, 5);
+
+        let _path = map.find_path_swim(start, end);
+
+        assert_eq!(map.pathfinding_cache.len(), 1);
+    }
+
+    #[test]
+    fn pathfinding_twice_doesnt_add_to_map_cache() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+        let end = Point::new(5, 5);
+
+        let _path1 = map.find_path_swim(start, end);
+        let _path2 = map.find_path_swim(start, end);
+
+        assert_eq!(map.pathfinding_cache.len(), 1);
+    }
+
+    #[test]
+    fn map_cache_entries_are_order_insensitive() {
+        let mut map = Map::new(10, 10);
+
+        let start = Point::new(1, 1);
+        let end = Point::new(5, 5);
+
+        let movetype1 = &[MoveType::Walk, MoveType::Fly];
+        let movetype2 = &[MoveType::Fly, MoveType::Walk];
+
+        let _path1 = map.find_path(start, end, movetype1);
+        let _path2 = map.find_path(start, end, movetype2);
+
+        // The second one should not be added to the cache (since they're the same)
+        assert_eq!(map.pathfinding_cache.len(), 1);
     }
 }

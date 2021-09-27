@@ -5,9 +5,11 @@ use serde::{Deserialize, Serialize};
 use super::MoveType;
 
 /// Builder struct for Tiles.
-/// Will fail if required fields (everything except custom_properties) is None.
 ///
-/// # Usage
+/// Will fail to build if any of the required fields
+/// (all except custom_movetypes) are None.
+///
+/// # Examples
 /// ```rust
 /// use labyrinth_rs::prelude::*;
 ///
@@ -22,7 +24,8 @@ use super::MoveType;
 ///     .unwrap();
 ///
 /// // Building a tile from a template
-/// let wall_from_template = TileBuilder::wall() // starts from preset wall template
+/// let wall_from_template = TileBuilder::wall()
+///     // starts from preset wall template (same as above example)
 ///     .kind("crystalwall")
 ///     .opaque(false)
 ///     .build()
@@ -31,21 +34,51 @@ use super::MoveType;
 /// // Building a wall with a special access property
 /// let phasable_wall = TileBuilder::wall()
 ///     .kind("phasebarrier")
-///     .property("phase", true)
+///     .add_movetype("phase", true)
 ///     // This tile is accessible to any entity that can move via phasing
 ///     .build()
 ///     .unwrap();
 /// ```
+///
+/// # Note: Direct construction
+/// For common basic tiles (wall, floor, water, lava, chasm), direct constructors
+/// have been implemented on the [`Tile`] struct so you don't have to go through
+/// the builder for basic tiles.
+///
+/// ```rust
+/// use labyrinth_rs::prelude::*;
+///
+/// let plain_wall = Tile::wall();
+/// let plain_floor = Tile::floor();
+/// let plain_water = Tile::water();
+/// let plain_lava = Tile::lava();
+/// let plain_chasm = Tile::chasm();
+/// ```
 pub struct TileBuilder {
-    kind: Option<String>,
-    opaque: Option<bool>,
-    walk: Option<bool>,
-    fly: Option<bool>,
-    swim: Option<bool>,
-    custom_properties: HashMap<String, bool>,
+    /// The name of the tile to be built.
+    ///
+    /// When set through TileBuilder::kind(), the string is converted to lowercase
+    pub kind: Option<String>,
+
+    /// The opacity of the tile to be built, used to perform FoV calculations.
+    pub opaque: Option<bool>,
+
+    /// Whether or not the tile to be built allows entry via walking
+    pub walk: Option<bool>,
+
+    /// Whether or not the tile to be built allows entry via flying
+    pub fly: Option<bool>,
+
+    /// Whether or not the tile to be built allows entry via swimming
+    pub swim: Option<bool>,
+
+    /// A hashmap containing all user-defined movement methods, set using the
+    /// [`TileBuilder::add_movetype`](#method.add_movetype) method
+    pub custom_movetypes: HashMap<String, bool>,
 }
 
 impl TileBuilder {
+    /// Initializes a TileBuilder with all Option fields set to None.
     pub fn new() -> TileBuilder {
         TileBuilder {
             kind: None,
@@ -53,10 +86,13 @@ impl TileBuilder {
             walk: None,
             fly: None,
             swim: None,
-            custom_properties: HashMap::new(),
+            custom_movetypes: HashMap::new(),
         }
     }
 
+    /// Initializes a TileBuilder with the same properties as a basic wall tile:
+    /// - blocks vision
+    /// - impassable
     pub fn wall() -> TileBuilder {
         TileBuilder::new()
             .kind("wall")
@@ -66,6 +102,9 @@ impl TileBuilder {
             .swim(false)
     }
 
+    /// Initializes a TileBuilder with the same properties as a basic floor tile:
+    /// - doesn't block vision
+    /// - passable to walkers and flyers
     pub fn floor() -> TileBuilder {
         TileBuilder::new()
             .kind("floor")
@@ -75,6 +114,9 @@ impl TileBuilder {
             .swim(false)
     }
 
+    /// Initializes a TileBuilder with the same properties as a basic water tile:
+    /// - doesn't block vision
+    /// - passable to swimmers and flyers
     pub fn water() -> TileBuilder {
         TileBuilder::new()
             .kind("water")
@@ -84,6 +126,9 @@ impl TileBuilder {
             .swim(true)
     }
 
+    /// Initializes a TileBuilder with the same properties as a basic lava tile:
+    /// - doesn't block vision
+    /// - passable to flyers only
     pub fn lava() -> TileBuilder {
         TileBuilder::new()
             .kind("lava")
@@ -93,6 +138,9 @@ impl TileBuilder {
             .swim(false)
     }
 
+    /// Initializes a TileBuilder with the same properties as a basic chasm tile:
+    /// - doesn't block vision
+    /// - passable to flyers only
     pub fn chasm() -> TileBuilder {
         TileBuilder::new()
             .kind("chasm")
@@ -102,6 +150,14 @@ impl TileBuilder {
             .swim(false)
     }
 
+    /// Sets the kind of the tile to be built. Essentially its name.
+    ///
+    /// As pathfinding is based solely on the other fields, this field doesn't
+    /// actually affect any calculations.
+    ///
+    /// However, it can be useful for differentiating between tiles that have
+    /// similar movement properties that have to be distinct from each other
+    /// for one reason or another (i.e. smoothened walls vs rough walls).
     pub fn kind(mut self, kind: &str) -> TileBuilder {
         let kind = kind.to_lowercase();
         self.kind = Some(kind);
@@ -109,37 +165,53 @@ impl TileBuilder {
         self
     }
 
+    /// Sets the opacity of the tile. Whether or not it can be seen through.
+    ///
+    /// This is used in Field of View calculations.
     pub fn opaque(mut self, value: bool) -> TileBuilder {
         self.opaque = Some(value);
         self
     }
 
+    /// Sets walk accessibility to the tile. Whether or not it can be accessed
+    /// via walking.
+    ///
+    /// Used for pathfinding calculations
     pub fn walk(mut self, value: bool) -> TileBuilder {
         self.walk = Some(value);
         self
     }
 
+    /// Sets fly accessibility to the tile. Whether or not it can be accessed
+    /// via flying.
+    ///
+    /// Used for pathfinding calculations
     pub fn fly(mut self, value: bool) -> TileBuilder {
         self.fly = Some(value);
         self
     }
 
+    /// Sets swim accessibility to the tile. Whether or not it can be accessed
+    /// via swimming.
+    ///
+    /// Used for pathfinding calculations
     pub fn swim(mut self, value: bool) -> TileBuilder {
         self.swim = Some(value);
         self
     }
 
-    pub fn property(mut self, prop: &str, value: bool) -> TileBuilder {
-        let prop = prop.to_lowercase();
-        let lcase_prop = prop.as_str();
+    /// Sets a custom movement property to the tile. Whether or not it can be
+    /// accessed via a user-defined movement method.
+    /// (i.e. lava walking, digging, etc.)
+    pub fn add_movetype(mut self, movtype: &str, value: bool) -> TileBuilder {
+        let prop = movtype.to_lowercase();
 
-        self.custom_properties
-            .entry(lcase_prop.to_string())
-            .or_insert(value);
+        self.custom_movetypes.entry(prop).or_insert(value);
 
         self
     }
 
+    /// Checks if all required fields on the TileBuilder have been set.
     pub fn is_fully_initialized(&self) -> bool {
         self.kind.is_some()
             && self.opaque.is_some()
@@ -148,6 +220,8 @@ impl TileBuilder {
             && self.swim.is_some()
     }
 
+    /// Attempts to build the tile. Returns an error if any required field
+    /// is uninitialized.
     pub fn build(self) -> Result<Tile, String> {
         if !self.is_fully_initialized() {
             Err("Builder is not fully initialized!".to_string())
@@ -158,21 +232,64 @@ impl TileBuilder {
                 walk: self.walk.unwrap(),
                 fly: self.fly.unwrap(),
                 swim: self.swim.unwrap(),
-                other_movement: self.custom_properties,
+                other_movement: self.custom_movetypes,
             })
         }
     }
 }
 
-/// Tile struct that contains the accessibility information and its name.
+/// Tile struct that contains its name (for differentiation purposes),
+/// and its accessibility properties.
 ///
+/// # Construction
+/// ## Direct Construction
+/// Direct constructors are provided for some basic tile types:
+/// - Wall through [`Tile::wall()`]
+///     - Blocks vision
+///     - Impassable
+/// - Floor through [`Tile::floor()`]
+///     - Doesn't block vision
+///     - Passable for walkers and flyers
+/// - Water through [`Tile::water()`]
+///     - Doesn't block vision
+///     - Passable for flyers and swimmers
+/// - Lava through [`Tile::lava()`]
+///     - Doesn't block vision
+///     - Passable for flyers
+/// - Chasm through [`Tile::chasm()`]
+///     - Doesn't block vision
+///     - Passable for flyers
+/// ## Using TileBuilder
+/// For more complex tiles, a [`TileBuilder`] struct is provided.
+/// ```rust
+/// use labyrinth_rs::prelude::*;
+///
+/// let crystal_wall = TileBuilder::wall()
+///     .kind("crystal_wall")
+///     .opaque(false)
+///     .build()
+///     .unwrap();
+/// ```
+
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
+    /// The kind of tile it is.
     pub kind: String,
+
+    /// Whether or not the tile blocks vision.
     pub opaque: bool,
+
+    /// Whether or not a walking entity can access the tile.
     pub walk: bool,
+
+    /// Whether or not a flying entity can access the tile.
     pub fly: bool,
+
+    /// Whether or not a swimming entity can access the tile.
     pub swim: bool,
+
+    /// Any other user-defined alternate forms of movement and their accessibility
+    /// for that form of movement.
     pub other_movement: HashMap<String, bool>,
 }
 
@@ -249,7 +366,7 @@ impl Tile {
     /// Returns an error if any of the movement types specified are not
     /// specified for the tile.
     pub fn can_enter(&self, move_types: &[MoveType]) -> Result<bool, String> {
-        // TODO: This should return a usr-facing error
+        // TODO: This should return a user-facing error
         move_types
             .iter()
             .map(|move_type| match move_type {
@@ -397,6 +514,16 @@ mod tests {
     fn undefined_movtype_causes_error() -> Result<(), String> {
         let custom_tile = TileBuilder::floor().kind("sometile").build()?;
         let res = custom_tile.can_enter(&[MoveType::Custom("undefined".to_string())]);
+
+        assert!(res.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn undefined_movtype_always_causes_error() -> Result<(), String> {
+        let custom_tile = TileBuilder::floor().kind("sometile").build()?;
+        let res =
+            custom_tile.can_enter(&[MoveType::Walk, MoveType::Custom("undefined".to_string())]);
 
         assert!(res.is_err());
         Ok(())

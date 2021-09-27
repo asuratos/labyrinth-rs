@@ -6,6 +6,7 @@
 //!
 //! ```
 // TODO: Top level crate docs
+#![warn(missing_docs)]
 
 mod errors;
 
