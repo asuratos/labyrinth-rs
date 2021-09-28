@@ -1,46 +1,53 @@
+//! This module holds the [`Tile`] and [`TileBuilder`] structs.
+//!
+//!
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
 use super::MoveType;
 
-/// Builder struct for Tiles.
+/// Builder struct for [`Tiles`](Tile).
 ///
 /// Will fail to build if any of the required fields
 /// (all except custom_movetypes) are None.
 ///
 /// # Examples
 /// ```rust
-/// use labyrinth_rs::prelude::*;
+/// fn main() -> Result<(), String> {
+///     use labyrinth_rs::prelude::*;
 ///
-/// // Building a Tile manually
-/// let wall_manual = TileBuilder::new()
-///     .kind("wall")
-///     .opaque(true)
-///     .walk(false)
-///     .fly(false)
-///     .swim(false)
-///     .build()
-///     .unwrap();
+///     // Building a Tile manually
+///     let wall_manual = TileBuilder::new()
+///         .kind("wall")
+///         .opaque(true)
+///         .walk(false)
+///         .fly(false)
+///         .swim(false)
+///         .build()?;
 ///
-/// // Building a tile from a template
-/// let wall_from_template = TileBuilder::wall()
-///     // starts from preset wall template (same as above example)
-///     .kind("crystalwall")
-///     .opaque(false)
-///     .build()
-///     .unwrap();
+///     // Building a tile from a template
+///     let wall_from_template = TileBuilder::wall()
+///         // starts from preset wall template (same as above example)
+///         .kind("crystalwall")
+///         .opaque(false)
+///         .build()?;
 ///
-/// // Building a wall with a special access property
-/// let phasable_wall = TileBuilder::wall()
-///     .kind("phasebarrier")
-///     .add_movetype("phase", true)
-///     // This tile is accessible to any entity that can move via phasing
-///     .build()
-///     .unwrap();
+///     // Building a wall with a special access property
+///     let phasable_wall = TileBuilder::wall()
+///         .kind("phasebarrier")
+///         .add_movetype("phase", true)
+///         // This tile is accessible to any entity that can move via phasing
+///         .build()?;
+///
+///     // Attempting a build when the TileBuilder isn't fully initialized will return an error
+///     assert!(TileBuilder::new().build().is_err());
+///
+///     Ok(())
+/// }
 /// ```
 ///
-/// # Note: Direct construction
+/// # Note: Direct construction of Tiles
 /// For common basic tiles (wall, floor, water, lava, chasm), direct constructors
 /// have been implemented on the [`Tile`] struct so you don't have to go through
 /// the builder for basic tiles.
@@ -73,7 +80,7 @@ pub struct TileBuilder {
     pub swim: Option<bool>,
 
     /// A hashmap containing all user-defined movement methods, set using the
-    /// [`TileBuilder::add_movetype`](#method.add_movetype) method
+    /// [`TileBuilder::add_movetype`](TileBuilder::add_movetype) method
     pub custom_movetypes: HashMap<String, bool>,
 }
 
@@ -267,14 +274,18 @@ impl TileBuilder {
 ///     - Passable for flyers
 /// ## Using TileBuilder
 /// For more complex tiles, a [`TileBuilder`] struct is provided.
+/// For more in-depth examples, have a look at its [documentation](TileBuilder).
 /// ```rust
-/// use labyrinth_rs::prelude::*;
+/// fn main() -> Result<(), String> {
+///     use labyrinth_rs::prelude::*;
 ///
-/// let crystal_wall = TileBuilder::wall()
-///     .kind("crystal_wall")
-///     .opaque(false)
-///     .build()
-///     .unwrap();
+///     let crystal_wall = TileBuilder::wall()
+///         .kind("crystal_wall")
+///         .opaque(false)
+///         .build()?;
+///
+///     Ok(())
+/// }
 /// ```
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
@@ -371,6 +382,28 @@ impl Tile {
     ///
     /// Returns an error if any of the movement types specified are not
     /// specified for the tile.
+    ///
+    /// # Example
+    /// ```rust
+    /// fn main() -> Result<(), String> {
+    ///     use labyrinth_rs::prelude::*;
+    ///
+    ///     let tile = TileBuilder::water().build()?;
+    ///     
+    ///     // Returns Ok(false) when inaccessible by movement type
+    ///     assert!(!tile.can_enter(&[MoveType::Walk])?);
+    ///
+    ///     // Returns Ok(true) when accessible by movement type
+    ///     assert!(tile.can_enter(&[MoveType::Fly])?);
+    ///
+    ///     // ... but will return an error on an undefined movement type
+    ///     assert!(tile
+    ///         .can_enter(&[MoveType::Custom("undefined_movetype".to_string())])
+    ///         .is_err());
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn can_enter(&self, move_types: &[MoveType]) -> Result<bool, String> {
         // TODO: This should return a user-facing error
         move_types

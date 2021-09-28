@@ -118,7 +118,7 @@ impl Map {
     pub fn new_from_dims(dimensions: Point) -> Map {
         Map {
             tiles: vec![Default::default(); (dimensions.x * dimensions.y) as usize],
-            dimensions: dimensions,
+            dimensions,
             pathfinding_cache: HashMap::new(),
         }
     }
@@ -159,11 +159,12 @@ impl Map {
         // then get the map from the cache
         self.pathfinding_cache
             .get(&move_types_vec)
-            .ok_or("Unable to get from cache".to_string())
+            .ok_or_else(|| "Unable to get from cache".to_string())
     }
 
     /// Find the path between two [`Points`](Point) for an entity with multiple
     /// movement types.
+    // TODO: Examples here
     pub fn find_path(
         &mut self,
         start: Point,
@@ -189,6 +190,7 @@ impl Map {
 
     /// Returns Dijkstra map for a set of starting [`Points`](Point), given
     /// the movement types of the entity.
+    // TODO: Examples here
     pub fn dijkstra_map(
         &mut self,
         starts: &[Point],
@@ -291,8 +293,8 @@ impl MapInternal {
         let opaque: Vec<bool> = map.tiles.iter().map(|tile| tile.opaque).collect();
 
         Ok(MapInternal {
-            opaque: opaque,
-            enterable: enterable,
+            opaque,
+            enterable,
             dimensions: map.dimensions(),
         })
     }

@@ -1,9 +1,9 @@
 //! Module containing the Generator structs
 
-use std::collections::HashMap;
+// use std::collections::HashMap;
 
 use bracket_geometry::prelude::*;
-use bracket_pathfinding::prelude::*;
+// use bracket_pathfinding::prelude::*;
 
 use super::errors::BuilderError;
 pub use super::map_objects::*;
@@ -21,8 +21,13 @@ pub enum FloorGenAlg {
 ///
 /// let mut mapgen = MapGenerator2D::new(80,50);
 /// let floor1 = mapgen.generate(FloorGenAlg::Basic);
+/// assert!(floor1.is_ok());
+/// 
 /// let floor2 = mapgen.generate(FloorGenAlg::Basic);
+/// assert!(floor2.is_ok());
+/// 
 /// let floor3 = mapgen.generate(FloorGenAlg::Basic);
+/// assert!(floor3.is_ok());
 /// ```
 pub struct MapGenerator2D {
     map: Map,
@@ -49,12 +54,12 @@ impl MapGenerator2D {
                 // generation function for this goes here
                 // self.map = build_rooms_and_corridors
             }
-            _ => {
-                return Err(BuilderError::BuildError(format!(
-                    "FloorGenAlg {:?} is unimplemented for this Generator",
-                    method
-                )))
-            }
+            // _ => {
+            //     return Err(BuilderError::BuildError(format!(
+            //         "FloorGenAlg {:?} is unimplemented for this Generator",
+            //         method
+            //     )))
+            // }
         };
 
         Ok(self.map.clone())
