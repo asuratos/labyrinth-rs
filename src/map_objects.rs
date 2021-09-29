@@ -353,7 +353,7 @@ mod tests {
     }
 
     #[test]
-    fn out_of_bounds_neighbors() {
+    fn out_of_bounds_neighbors_are_ignored() {
         let map = Map::new_empty(3, 3);
 
         assert_eq!(count_neighbors(&map, 4), 4); // Center
@@ -369,7 +369,104 @@ mod tests {
         assert_eq!(count_neighbors(&map, 7), 3); // Bottom edge
     }
 
-    // Pathfinding tests
+    fn prepare_testmap_3x3() -> Map {
+        let mut map = Map::new(3, 3);
+
+        map.set_tile_at(Point::new(0, 1), Tile::water());
+        map.set_tile_at(Point::new(1, 0), Tile::floor());
+        map.set_tile_at(Point::new(1, 2), Tile::lava());
+        map.set_tile_at(Point::new(2, 1), Tile::chasm());
+
+        map
+    }
+
+    fn prepare_testmap_3x3_for_movtype(movtypes: &[MoveType]) -> MapInternal {
+        let map = prepare_testmap_3x3();
+        MapInternal::from_map(&map, movtypes).unwrap()
+    }
+
+    fn smallvecs_are_equal(
+        a: SmallVec<[(usize, f32); 10]>,
+        b: SmallVec<[(usize, f32); 10]>,
+    ) -> bool {
+        // if the two vecs have the same length
+        if a.len() != b.len() {
+            return false;
+        }
+
+        let vec_b = b.into_vec();
+
+        // count the number of times each element in a appears in b
+        let a_in_b = a
+            .iter()
+            .filter(|&item| vec_b.contains(item))
+            .map(|&a_item| vec_b.iter().filter(|&&b_item| a_item == b_item).count())
+            .collect::<Vec<usize>>();
+
+        // if every element in appears exactly once, then they are equal
+        a_in_b.iter().map(|&a| a == 1 as usize).all(|a| a)
+    }
+
+    #[test]
+    fn walk_on_default_tiles() {
+        let map = prepare_testmap_3x3();
+
+        let center = map.point2d_to_index(Point::new(1, 1));
+        let expected: SmallVec<[(usize, f32); 10]> =
+            smallvec![(map.point2d_to_index(Point::new(1, 0)), 1.0)];
+
+        assert_eq!(map.get_available_exits(center), expected);
+    }
+
+    #[test]
+    fn fly_on_default_tiles() {
+        let map = prepare_testmap_3x3_for_movtype(&[MoveType::Fly]);
+
+        let center = map.point2d_to_index(Point::new(1, 1));
+
+        let expected: SmallVec<[(usize, f32); 10]> = smallvec![
+            (map.point2d_to_index(Point::new(1, 0)), 1.0), // water
+            (map.point2d_to_index(Point::new(0, 1)), 1.0), // floor
+            (map.point2d_to_index(Point::new(1, 2)), 1.0), // lava
+            (map.point2d_to_index(Point::new(2, 1)), 1.0), // chasm
+        ];
+
+        assert!(smallvecs_are_equal(
+            map.get_available_exits(center),
+            expected
+        ));
+    }
+
+    #[test]
+    fn swim_on_default_tiles() {
+        let map = prepare_testmap_3x3_for_movtype(&[MoveType::Swim]);
+
+        let center = map.point2d_to_index(Point::new(1, 1));
+
+        let expected: SmallVec<[(usize, f32); 10]> = smallvec![
+            (map.point2d_to_index(Point::new(1, 0)), 1.0), // water
+        ];
+
+        assert!(smallvecs_are_equal(
+            map.get_available_exits(center),
+            expected
+        ));
+    }
+
+    #[test]
+    fn no_movement_can_enter_walls() {
+        let walkmap = Map::new(3, 3);
+        let flymap = MapInternal::from_map(&walkmap, &[MoveType::Fly]).unwrap();
+        let swimmap = MapInternal::from_map(&walkmap, &[MoveType::Swim]).unwrap();
+
+        let center = walkmap.point2d_to_index(Point::new(1, 1));
+
+        assert!(walkmap.get_available_exits(center).is_empty());
+        assert!(flymap.get_available_exits(center).is_empty());
+        assert!(swimmap.get_available_exits(center).is_empty());
+    }
+
+    // Map Cache behavior tests
     #[test]
     fn pathfinding_walk_doesnt_add_to_map_cache() {
         let mut map = Map::new(10, 10);
