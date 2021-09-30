@@ -378,6 +378,15 @@ impl Tile {
         }
     }
 
+    /// Adds a custom movement property to the tile. Whether or not it can be
+    /// accessed via a user-defined movement method.
+    /// (i.e. lava walking, digging, etc.)
+    pub fn add_movetype(&mut self, movtype: &str, value: bool) {
+        let prop = movtype.to_lowercase();
+
+        self.other_movement.entry(prop).or_insert(value);
+    }
+
     /// Check if an entity with the given move types can enter a tile.
     ///
     /// Returns an error if any of the movement types specified are not
@@ -517,7 +526,7 @@ mod tests {
     fn tile_enterable_with_one_matching_movtype() -> Result<(), String> {
         let custom_tile = TileBuilder::floor().kind("sometile").build()?;
 
-        custom_tile.can_enter(&[MoveType::Walk])?;
+        assert!(custom_tile.can_enter(&[MoveType::Walk])?);
 
         Ok(())
     }
@@ -526,7 +535,7 @@ mod tests {
     fn tile_enterable_with_multiple_matching_movtype() -> Result<(), String> {
         let custom_tile = TileBuilder::floor().kind("sometile").build()?;
 
-        custom_tile.can_enter(&[MoveType::Walk, MoveType::Fly])?;
+        assert!(custom_tile.can_enter(&[MoveType::Walk, MoveType::Fly])?);
 
         Ok(())
     }
@@ -535,8 +544,26 @@ mod tests {
     fn tile_enterable_with_matching_and_unmatching_movtype() -> Result<(), String> {
         let custom_tile = TileBuilder::floor().kind("sometile").build()?;
 
-        custom_tile.can_enter(&[MoveType::Walk, MoveType::Swim])?;
+        assert!(custom_tile.can_enter(&[MoveType::Walk, MoveType::Swim])?);
 
+        Ok(())
+    }
+
+    #[test]
+    fn tile_enterable_with_custom_movetype() -> Result<(), String> {
+        let custom_tile = TileBuilder::wall().add_movetype("dig", true).build()?;
+
+        assert!(custom_tile.can_enter(&[MoveType::Custom("dig".to_string())])?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn movetypes_can_be_directly_added_to_tiles() -> Result<(), String> {
+        let mut tile = Tile::wall();
+        tile.add_movetype("dig", true);
+
+        assert!(tile.can_enter(&[MoveType::Custom("dig".to_string())])?);
         Ok(())
     }
 

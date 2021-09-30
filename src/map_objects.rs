@@ -270,6 +270,14 @@ impl Map {
     pub fn set_lava(&mut self, loc: Point) {
         self.set_tile_at(loc, Tile::lava());
     }
+
+    /// Adds a specified movetype to the entire map
+    pub fn add_movetype(&mut self, move_type: &str, default_value: bool) {
+        self.tiles
+            .iter_mut()
+            .for_each(|tile| tile.add_movetype(move_type, default_value));
+        self.pathfinding_cache.clear();
+    }
 }
 
 // Internal Map struct for pathfinding using alternate movement types.
@@ -484,9 +492,6 @@ mod tests {
             (map.point2d_to_index(Point::new(0, 1)), 1.0), // water
         ];
 
-        println!("exits: {:?}", map.get_available_exits(center));
-        println!("expected: {:?}", expected);
-
         assert!(smallvecs_are_equal(
             map.get_available_exits(center),
             expected
@@ -504,6 +509,36 @@ mod tests {
         assert!(walkmap.get_available_exits(center).is_empty());
         assert!(flymap.get_available_exits(center).is_empty());
         assert!(swimmap.get_available_exits(center).is_empty());
+    }
+
+    #[test]
+    fn custom_movement_types_are_usable() -> Result<(), String> {
+        let mut map = Map::new(3, 3);
+        let phasewall = TileBuilder::wall()
+            .kind("phasewall")
+            .add_movetype("phasing", true)
+            .build()?;
+
+        let center = map.point2d_to_index(Point::new(1, 1));
+
+        map.add_movetype("phasing", false);
+
+        map.set_tile_at(Point::new(0, 1), phasewall.clone());
+        map.set_tile_at(Point::new(1, 0), phasewall.clone());
+
+        let expected: SmallVec<[(usize, f32); 10]> = smallvec![
+            (map.point2d_to_index(Point::new(0, 1)), 1.0),
+            (map.point2d_to_index(Point::new(1, 0)), 1.0),
+        ];
+
+        let phasemap = MapInternal::from_map(&map, &[MoveType::Custom("phasing".to_string())])?;
+
+        assert!(smallvecs_are_equal(
+            phasemap.get_available_exits(center),
+            expected
+        ));
+
+        Ok(())
     }
 
     // Map Cache behavior tests
@@ -631,6 +666,11 @@ mod tests {
         _path = map.find_path_fly(start, end);
         assert_eq!(map.pathfinding_cache.len(), 1);
         map.set_lava(Point::new(3, 3));
+        assert_eq!(map.pathfinding_cache.len(), 0);
+
+        _path = map.find_path_fly(start, end);
+        assert_eq!(map.pathfinding_cache.len(), 1);
+        map.add_movetype("something", false);
         assert_eq!(map.pathfinding_cache.len(), 0);
     }
 }
