@@ -385,9 +385,9 @@ mod tests {
         MapInternal::from_map(&map, movtypes).unwrap()
     }
 
-    fn smallvecs_are_equal(
-        a: SmallVec<[(usize, f32); 10]>,
-        b: SmallVec<[(usize, f32); 10]>,
+    fn smallvecs_are_equal<T: Copy + PartialEq>(
+        a: SmallVec<[T; 10]>,
+        b: SmallVec<[T; 10]>,
     ) -> bool {
         // if the two vecs have the same length
         if a.len() != b.len() {
@@ -403,8 +403,45 @@ mod tests {
             .map(|&a_item| vec_b.iter().filter(|&&b_item| a_item == b_item).count())
             .collect::<Vec<usize>>();
 
-        // if every element in appears exactly once, then they are equal
-        a_in_b.iter().map(|&a| a == 1 as usize).all(|a| a)
+        // count the number of times an element is in a
+        let a_in_a = a
+            .iter()
+            .map(|&a_item| a.iter().filter(|&item| a_item == *item).count())
+            .collect::<Vec<usize>>();
+
+        a_in_a == a_in_b
+    }
+
+    #[test]
+    fn smallvec_equality_tests_work() {
+        // smallvecs with the same elements are equal
+        assert!(smallvecs_are_equal(
+            smallvec![(1, 1.0)],
+            smallvec![(1, 1.0)]
+        ));
+
+        // order invariance of elements
+        assert!(smallvecs_are_equal(
+            smallvec![(1, 1.0), (2, 1.0)],
+            smallvec![(2, 1.0), (1, 1.0)]
+        ));
+
+        // smallvecs with different elements are NOT equal
+        // completely different items
+        assert!(!smallvecs_are_equal(
+            smallvec![(3, 1.0)],
+            smallvec![(2, 1.0)]
+        ));
+
+        // same items, different occurences
+        assert!(!smallvecs_are_equal(
+            smallvec![(2, 1.0), (2, 1.0)],
+            smallvec![(2, 1.0)]
+        ));
+        assert!(!smallvecs_are_equal(
+            smallvec![(2, 1.0)],
+            smallvec![(2, 1.0), (2, 1.0)]
+        ));
     }
 
     #[test]
@@ -425,8 +462,8 @@ mod tests {
         let center = map.point2d_to_index(Point::new(1, 1));
 
         let expected: SmallVec<[(usize, f32); 10]> = smallvec![
-            (map.point2d_to_index(Point::new(1, 0)), 1.0), // water
-            (map.point2d_to_index(Point::new(0, 1)), 1.0), // floor
+            (map.point2d_to_index(Point::new(0, 1)), 1.0), // water
+            (map.point2d_to_index(Point::new(1, 0)), 1.0), // floor
             (map.point2d_to_index(Point::new(1, 2)), 1.0), // lava
             (map.point2d_to_index(Point::new(2, 1)), 1.0), // chasm
         ];
@@ -444,8 +481,11 @@ mod tests {
         let center = map.point2d_to_index(Point::new(1, 1));
 
         let expected: SmallVec<[(usize, f32); 10]> = smallvec![
-            (map.point2d_to_index(Point::new(1, 0)), 1.0), // water
+            (map.point2d_to_index(Point::new(0, 1)), 1.0), // water
         ];
+
+        println!("exits: {:?}", map.get_available_exits(center));
+        println!("expected: {:?}", expected);
 
         assert!(smallvecs_are_equal(
             map.get_available_exits(center),
