@@ -30,7 +30,7 @@ pub enum FloorGenAlg {
 /// assert!(floor3.is_ok());
 /// ```
 pub struct MapGenerator2D {
-    map: Labyrinth,
+    map: Labyrinth2D,
     dimensions: Point,
 }
 
@@ -38,13 +38,13 @@ impl MapGenerator2D {
     /// Creates a new Generator struct using width and height inputs
     pub fn new(width: usize, height: usize) -> MapGenerator2D {
         MapGenerator2D {
-            map: Labyrinth::new(width, height),
+            map: Labyrinth2D::new(width, height),
             dimensions: Point::new(width, height),
         }
     }
 
     /// Generates a FinishedMap using the current settings.
-    pub fn generate(&mut self, method: FloorGenAlg) -> Result<Labyrinth, BuilderError> {
+    pub fn generate(&mut self, method: FloorGenAlg) -> Result<Labyrinth2D, BuilderError> {
         // Start with a new map
         self.flush_map();
 
@@ -65,7 +65,7 @@ impl MapGenerator2D {
     }
 
     fn flush_map(&mut self) {
-        self.map = Labyrinth::new_from_dims(self.dimensions);
+        self.map = Labyrinth2D::new_from_dims(self.dimensions);
     }
 }
 
