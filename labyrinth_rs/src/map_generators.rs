@@ -6,7 +6,7 @@ use bracket_geometry::prelude::*;
 // use bracket_pathfinding::prelude::*;
 
 use super::errors::BuilderError;
-pub use super::map_objects::*;
+use labyrinth_map::prelude::*;
 
 #[derive(Debug)]
 pub enum FloorGenAlg {
@@ -30,7 +30,7 @@ pub enum FloorGenAlg {
 /// assert!(floor3.is_ok());
 /// ```
 pub struct MapGenerator2D {
-    map: Map,
+    map: Labyrinth,
     dimensions: Point,
 }
 
@@ -38,13 +38,13 @@ impl MapGenerator2D {
     /// Creates a new Generator struct using width and height inputs
     pub fn new(width: usize, height: usize) -> MapGenerator2D {
         MapGenerator2D {
-            map: Map::new(width, height),
+            map: Labyrinth::new(width, height),
             dimensions: Point::new(width, height),
         }
     }
 
     /// Generates a FinishedMap using the current settings.
-    pub fn generate(&mut self, method: FloorGenAlg) -> Result<Map, BuilderError> {
+    pub fn generate(&mut self, method: FloorGenAlg) -> Result<Labyrinth, BuilderError> {
         // Start with a new map
         self.flush_map();
 
@@ -65,16 +65,11 @@ impl MapGenerator2D {
     }
 
     fn flush_map(&mut self) {
-        self.map = Map::new_from_dims(self.dimensions);
+        self.map = Labyrinth::new_from_dims(self.dimensions);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn working() {
-        assert_eq!(1 + 1, 2);
-    }
 }

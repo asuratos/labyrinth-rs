@@ -15,7 +15,7 @@ use super::MoveType;
 /// # Examples
 /// ```rust
 /// fn main() -> Result<(), String> {
-///     use labyrinth_rs::prelude::*;
+///     use labyrinth_map::prelude::*;
 ///
 ///     // Building a Tile manually
 ///     let wall_manual = TileBuilder::new()
@@ -53,7 +53,7 @@ use super::MoveType;
 /// the builder for basic tiles.
 ///
 /// ```rust
-/// use labyrinth_rs::prelude::*;
+/// use labyrinth_map::prelude::*;
 ///
 /// let plain_wall = Tile::wall();
 /// let plain_floor = Tile::floor();
@@ -277,7 +277,7 @@ impl TileBuilder {
 /// For more in-depth examples, have a look at its [documentation](TileBuilder).
 /// ```rust
 /// fn main() -> Result<(), String> {
-///     use labyrinth_rs::prelude::*;
+///     use labyrinth_map::prelude::*;
 ///
 ///     let crystal_wall = TileBuilder::wall()
 ///         .kind("crystal_wall")
@@ -395,7 +395,7 @@ impl Tile {
     /// # Example
     /// ```rust
     /// fn main() -> Result<(), String> {
-    ///     use labyrinth_rs::prelude::*;
+    ///     use labyrinth_map::prelude::*;
     ///
     ///     let tile = TileBuilder::water().build()?;
     ///     

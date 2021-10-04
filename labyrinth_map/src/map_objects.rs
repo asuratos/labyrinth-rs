@@ -24,7 +24,7 @@ pub enum MoveType {
     Custom(String),
 }
 
-// TODO: Map struct documentation
+// TODO: Better Map struct documentation
 /// 2D Map struct, the output of the MapGenerator2D.
 ///
 /// Implements Algorithm2D and BaseMap traits from bracket-pathfinding,
@@ -32,12 +32,12 @@ pub enum MoveType {
 /// Also comes with built-in implementations for pathfinding for alternate
 /// movement methods (swim and fly).
 /// ```rust
-/// use labyrinth_rs::prelude::Map;
+/// use labyrinth_map::prelude::*;
 ///
-/// let map = Map::new(10,10);
+/// let map = Labyrinth::new(10,10);
 /// ```
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Map {
+pub struct Labyrinth {
     /// The vector of tiles in the map.
     tiles: Vec<Tile>,
     dimensions: Point,
@@ -46,13 +46,13 @@ pub struct Map {
 
 // Implementing Algorithm2D from bracket-pathfinding on map
 // This gives access to some useful helper methods using bracket-lib Points
-impl Algorithm2D for Map {
+impl Algorithm2D for Labyrinth {
     fn dimensions(&self) -> Point {
         self.dimensions
     }
 }
 
-impl BaseMap for Map {
+impl BaseMap for Labyrinth {
     fn is_opaque(&self, _idx: usize) -> bool {
         self.tiles[_idx].opaque
     }
@@ -88,13 +88,13 @@ impl BaseMap for Map {
     }
 }
 
-impl Map {
+impl Labyrinth {
     // ------------------ Constructors ---------------------------
     /// Constructs a new map with the passed width and height values.
     ///
     /// Initial Tiles are all walls.
-    pub fn new(width: usize, height: usize) -> Map {
-        Map {
+    pub fn new(width: usize, height: usize) -> Labyrinth {
+        Labyrinth {
             tiles: vec![Default::default(); width * height],
             dimensions: Point::new(width, height),
             pathfinding_cache: HashMap::new(),
@@ -104,8 +104,8 @@ impl Map {
     /// Constructs a new map with the passed width and height values.
     ///
     /// Initial Tiles are all floors.
-    pub fn new_empty(width: usize, height: usize) -> Map {
-        Map {
+    pub fn new_empty(width: usize, height: usize) -> Labyrinth {
+        Labyrinth {
             tiles: vec![Tile::floor(); width * height],
             dimensions: Point::new(width, height),
             pathfinding_cache: HashMap::new(),
@@ -115,8 +115,8 @@ impl Map {
     /// Constructs a new map with a size defined by a 2d [`Point`].
     ///
     /// Initial Tiles are all walls.
-    pub fn new_from_dims(dimensions: Point) -> Map {
-        Map {
+    pub fn new_from_dims(dimensions: Point) -> Labyrinth {
+        Labyrinth {
             tiles: vec![Default::default(); (dimensions.x * dimensions.y) as usize],
             dimensions,
             pathfinding_cache: HashMap::new(),
@@ -291,7 +291,7 @@ struct MapInternal {
 }
 
 impl MapInternal {
-    fn from_map(map: &Map, move_types: &[MoveType]) -> Result<MapInternal, String> {
+    fn from_map(map: &Labyrinth, move_types: &[MoveType]) -> Result<MapInternal, String> {
         let enterable = map
             .tiles
             .iter()
@@ -356,13 +356,13 @@ mod tests {
     use super::*;
 
     // Trait implementation tests
-    fn count_neighbors(map: &Map, idx: usize) -> usize {
+    fn count_neighbors(map: &Labyrinth, idx: usize) -> usize {
         map.get_available_exits(idx).len()
     }
 
     #[test]
     fn out_of_bounds_neighbors_are_ignored() {
-        let map = Map::new_empty(3, 3);
+        let map = Labyrinth::new_empty(3, 3);
 
         assert_eq!(count_neighbors(&map, 4), 4); // Center
 
@@ -377,8 +377,8 @@ mod tests {
         assert_eq!(count_neighbors(&map, 7), 3); // Bottom edge
     }
 
-    fn prepare_testmap_3x3() -> Map {
-        let mut map = Map::new(3, 3);
+    fn prepare_testmap_3x3() -> Labyrinth {
+        let mut map = Labyrinth::new(3, 3);
 
         map.set_tile_at(Point::new(0, 1), Tile::water());
         map.set_tile_at(Point::new(1, 0), Tile::floor());
@@ -500,7 +500,7 @@ mod tests {
 
     #[test]
     fn no_movement_can_enter_walls() {
-        let walkmap = Map::new(3, 3);
+        let walkmap = Labyrinth::new(3, 3);
         let flymap = MapInternal::from_map(&walkmap, &[MoveType::Fly]).unwrap();
         let swimmap = MapInternal::from_map(&walkmap, &[MoveType::Swim]).unwrap();
 
@@ -513,7 +513,7 @@ mod tests {
 
     #[test]
     fn custom_movement_types_are_usable() -> Result<(), String> {
-        let mut map = Map::new(3, 3);
+        let mut map = Labyrinth::new(3, 3);
         let phasewall = TileBuilder::wall()
             .kind("phasewall")
             .add_movetype("phasing", true)
@@ -544,7 +544,7 @@ mod tests {
     // Map Cache behavior tests
     #[test]
     fn pathfinding_walk_doesnt_add_to_map_cache() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
         let end = Point::new(5, 5);
@@ -557,7 +557,7 @@ mod tests {
 
     #[test]
     fn pathfinding_adds_to_map_cache() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
         let end = Point::new(5, 5);
@@ -569,7 +569,7 @@ mod tests {
 
     #[test]
     fn pathfinding_twice_doesnt_add_to_map_cache() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
         let end = Point::new(5, 5);
@@ -582,7 +582,7 @@ mod tests {
 
     #[test]
     fn map_cache_entries_are_order_insensitive() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
         let end = Point::new(5, 5);
@@ -599,7 +599,7 @@ mod tests {
 
     #[test]
     fn dijkstra_maps_walk_dont_add_to_map_cache() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
 
@@ -611,7 +611,7 @@ mod tests {
 
     #[test]
     fn dijkstra_maps_add_to_map_cache() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
 
@@ -622,7 +622,7 @@ mod tests {
 
     #[test]
     fn dijkstra_maps_twice_doesnt_add_to_map_cache() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
 
@@ -634,7 +634,7 @@ mod tests {
 
     #[test]
     fn pathfinding_and_dijkstra_maps_share_map_cache() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
         let end = Point::new(5, 5);
@@ -648,7 +648,7 @@ mod tests {
     // Map editing tests
     #[test]
     fn editing_map_clears_cache() {
-        let mut map = Map::new(10, 10);
+        let mut map = Labyrinth::new(10, 10);
 
         let start = Point::new(1, 1);
         let end = Point::new(5, 5);

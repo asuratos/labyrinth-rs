@@ -8,21 +8,21 @@
 // TODO: Top level crate docs
 #![warn(missing_docs)]
 
+use labyrinth_map;
+
 mod errors;
 
 mod map_generators;
-mod map_objects;
 
 pub mod prelude {
     //! Re-exported important objects (public API)
     pub use crate::map_generators::*;
-    pub use crate::map_objects::*;
+    pub use labyrinth_map::prelude::*;
+}
+
+pub mod labyrinth {
+    pub use labyrinth_map::prelude::*;
 }
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+mod tests {}

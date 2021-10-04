@@ -1,0 +1,22 @@
+[package]
+name = "labyrinth_rs"
+version = "0.1.0"
+authors = ["Aldrich Suratos <cyurio@gmail.com>"]
+edition = "2018"
+description = "A crate for roguelike-style map generation."
+license = "MIT OR Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[example]]
+name = "demo"
+test = true
+
+[dependencies]
+labyrinth_map = {path = "../labyrinth_map"}
+serde = {version = "*", features = ["derive"]}
+bracket-geometry = {version = "*", features = ["serde"]}
+bracket-pathfinding = "*"
+
+[dev-dependencies]
+bracket-terminal = "*"
