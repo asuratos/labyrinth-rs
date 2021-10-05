@@ -1,5 +1,5 @@
 use bracket_terminal::prelude::*;
-use labyrinth_rs::prelude::*;
+use daedalus::prelude::*;
 
 struct State {}
 

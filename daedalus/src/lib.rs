@@ -1,7 +1,7 @@
 //! This is a crate for building 2d Roguelike-stype maps.
 //! # Example Usage
 //! ```rust
-//! use labyrinth_rs::prelude::*;
+//! use daedalus::prelude::*;
 //!
 //!
 //! ```

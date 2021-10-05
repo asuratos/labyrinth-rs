@@ -17,7 +17,7 @@ pub enum FloorGenAlg {
 ///
 /// # Example Usage
 /// ```rust
-/// use labyrinth_rs::prelude::*;
+/// use daedalus::prelude::*;
 ///
 /// let mut mapgen = MapGenerator2D::new(80,50);
 /// let floor1 = mapgen.generate(FloorGenAlg::Basic);

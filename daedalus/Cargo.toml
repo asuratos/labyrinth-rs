@@ -1,5 +1,5 @@
 [package]
-name = "labyrinth_rs"
+name = "daedalus"
 version = "0.1.0"
 authors = ["Aldrich Suratos <cyurio@gmail.com>"]
 edition = "2018"
