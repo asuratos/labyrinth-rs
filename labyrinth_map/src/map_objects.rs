@@ -25,7 +25,7 @@ pub enum MoveType {
 }
 
 // TODO: Better Map struct documentation
-/// 2D Map struct, the output of the MapGenerator2D.
+/// Labyrinth2D struct, the output of the MapGenerator2D.
 ///
 /// Implements Algorithm2D and BaseMap traits from bracket-pathfinding,
 /// which allows for bracket-lib pathfinding algorithms.
@@ -41,10 +41,10 @@ pub struct Labyrinth2D {
     /// The vector of tiles in the map.
     tiles: Vec<Tile>,
     dimensions: Point,
-    pathfinding_cache: HashMap<Vec<MoveType>, MapInternal>,
+    pathfinding_cache: HashMap<Vec<MoveType>, InternalLabyrinth2D>,
 }
 
-// Implementing Algorithm2D from bracket-pathfinding on map
+// Implementing Algorithm2D from bracket-pathfinding on Labyrinth2D
 // This gives access to some useful helper methods using bracket-lib Points
 impl Algorithm2D for Labyrinth2D {
     fn dimensions(&self) -> Point {
@@ -90,7 +90,7 @@ impl BaseMap for Labyrinth2D {
 
 impl Labyrinth2D {
     // ------------------ Constructors ---------------------------
-    /// Constructs a new map with the passed width and height values.
+    /// Constructs a new Labyrinth with the passed width and height values.
     ///
     /// Initial Tiles are all walls.
     pub fn new(width: usize, height: usize) -> Labyrinth2D {
@@ -101,7 +101,7 @@ impl Labyrinth2D {
         }
     }
 
-    /// Constructs a new map with the passed width and height values.
+    /// Constructs a new Labyrinth with the passed width and height values.
     ///
     /// Initial Tiles are all floors.
     pub fn new_empty(width: usize, height: usize) -> Labyrinth2D {
@@ -112,7 +112,7 @@ impl Labyrinth2D {
         }
     }
 
-    /// Constructs a new map with a size defined by a 2d [`Point`].
+    /// Constructs a new Labyrinth with a size defined by a 2d [`Point`].
     ///
     /// Initial Tiles are all walls.
     pub fn new_from_dims(dimensions: Point) -> Labyrinth2D {
@@ -143,7 +143,7 @@ impl Labyrinth2D {
         self.find_path(start, end, &[MoveType::Swim]).unwrap()
     }
 
-    fn get_from_cache_or_add(&mut self, move_types: &[MoveType]) -> Result<&MapInternal, String> {
+    fn get_from_cache_or_add(&mut self, move_types: &[MoveType]) -> Result<&InternalLabyrinth2D, String> {
         // Check if pathfinding over the movement type has been done before
         let mut move_types_vec = move_types.to_vec();
         move_types_vec.sort();
@@ -151,7 +151,7 @@ impl Labyrinth2D {
         if !self.pathfinding_cache.contains_key(&move_types_vec) {
             // if not, then add it to the cache
 
-            let projection = MapInternal::from_map(self, move_types_vec.as_slice())?;
+            let projection = InternalLabyrinth2D::from_map(self, move_types_vec.as_slice())?;
             self.pathfinding_cache
                 .insert(move_types_vec.clone(), projection);
         }
@@ -271,7 +271,7 @@ impl Labyrinth2D {
         self.set_tile_at(loc, Tile::lava());
     }
 
-    /// Adds a specified movetype to the entire map
+    /// Adds a specified movetype to every [`Tile`] in the entire [`Labyrinth2D`]
     pub fn add_movetype(&mut self, move_type: &str, default_value: bool) {
         self.tiles
             .iter_mut()
@@ -281,17 +281,17 @@ impl Labyrinth2D {
 }
 
 // Internal Map struct for pathfinding using alternate movement types.
-// When calling a pathfinding function for swim or fly on the Map struct,
+// When calling a pathfinding function for swim or fly on the Labyrinth2D struct,
 // it generates one of these and pathfinds over that.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct MapInternal {
+struct InternalLabyrinth2D {
     opaque: Vec<bool>,
     enterable: Vec<bool>,
     dimensions: Point,
 }
 
-impl MapInternal {
-    fn from_map(map: &Labyrinth2D, move_types: &[MoveType]) -> Result<MapInternal, String> {
+impl InternalLabyrinth2D {
+    fn from_map(map: &Labyrinth2D, move_types: &[MoveType]) -> Result<InternalLabyrinth2D, String> {
         let enterable = map
             .tiles
             .iter()
@@ -300,7 +300,7 @@ impl MapInternal {
 
         let opaque: Vec<bool> = map.tiles.iter().map(|tile| tile.opaque).collect();
 
-        Ok(MapInternal {
+        Ok(InternalLabyrinth2D {
             opaque,
             enterable,
             dimensions: map.dimensions(),
@@ -308,13 +308,13 @@ impl MapInternal {
     }
 }
 
-impl Algorithm2D for MapInternal {
+impl Algorithm2D for InternalLabyrinth2D {
     fn dimensions(&self) -> Point {
         self.dimensions
     }
 }
 
-impl BaseMap for MapInternal {
+impl BaseMap for InternalLabyrinth2D {
     fn is_opaque(&self, _idx: usize) -> bool {
         self.opaque[_idx]
     }
@@ -388,9 +388,9 @@ mod tests {
         map
     }
 
-    fn prepare_testmap_3x3_for_movtype(movtypes: &[MoveType]) -> MapInternal {
+    fn prepare_testmap_3x3_for_movtype(movtypes: &[MoveType]) -> InternalLabyrinth2D {
         let map = prepare_testmap_3x3();
-        MapInternal::from_map(&map, movtypes).unwrap()
+        InternalLabyrinth2D::from_map(&map, movtypes).unwrap()
     }
 
     fn smallvecs_are_equal<T: Copy + PartialEq>(
@@ -501,8 +501,8 @@ mod tests {
     #[test]
     fn no_movement_can_enter_walls() {
         let walkmap = Labyrinth2D::new(3, 3);
-        let flymap = MapInternal::from_map(&walkmap, &[MoveType::Fly]).unwrap();
-        let swimmap = MapInternal::from_map(&walkmap, &[MoveType::Swim]).unwrap();
+        let flymap = InternalLabyrinth2D::from_map(&walkmap, &[MoveType::Fly]).unwrap();
+        let swimmap = InternalLabyrinth2D::from_map(&walkmap, &[MoveType::Swim]).unwrap();
 
         let center = walkmap.point2d_to_index(Point::new(1, 1));
 
@@ -531,7 +531,7 @@ mod tests {
             (map.point2d_to_index(Point::new(1, 0)), 1.0),
         ];
 
-        let phasemap = MapInternal::from_map(&map, &[MoveType::Custom("phasing".to_string())])?;
+        let phasemap = InternalLabyrinth2D::from_map(&map, &[MoveType::Custom("phasing".to_string())])?;
 
         assert!(smallvecs_are_equal(
             phasemap.get_available_exits(center),
