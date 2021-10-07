@@ -143,7 +143,10 @@ impl Labyrinth2D {
         self.find_path(start, end, &[MoveType::Swim]).unwrap()
     }
 
-    fn get_from_cache_or_add(&mut self, move_types: &[MoveType]) -> Result<&InternalLabyrinth2D, String> {
+    fn get_from_cache_or_add(
+        &mut self,
+        move_types: &[MoveType],
+    ) -> Result<&InternalLabyrinth2D, String> {
         // Check if pathfinding over the movement type has been done before
         let mut move_types_vec = move_types.to_vec();
         move_types_vec.sort();
@@ -531,7 +534,8 @@ mod tests {
             (map.point2d_to_index(Point::new(1, 0)), 1.0),
         ];
 
-        let phasemap = InternalLabyrinth2D::from_map(&map, &[MoveType::Custom("phasing".to_string())])?;
+        let phasemap =
+            InternalLabyrinth2D::from_map(&map, &[MoveType::Custom("phasing".to_string())])?;
 
         assert!(smallvecs_are_equal(
             phasemap.get_available_exits(center),
