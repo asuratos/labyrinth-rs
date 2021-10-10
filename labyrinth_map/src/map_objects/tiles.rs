@@ -5,7 +5,21 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::MoveType;
+/// Enum defining possible movement methods
+#[derive(PartialEq, Eq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize, Clone)]
+pub enum MoveType {
+    /// variant for walking
+    Walk,
+
+    /// variant for flying
+    Fly,
+
+    /// variant for swimming
+    Swim,
+
+    /// variant for a user-defined movement type
+    Custom(String),
+}
 
 /// Builder struct for [`Tiles`](Tile).
 ///
@@ -70,6 +84,8 @@ pub struct TileBuilder {
     /// The opacity of the tile to be built, used to perform FoV calculations.
     pub opaque: Option<bool>,
 
+    pub access: Vec<MoveType>,
+
     /// Whether or not the tile to be built allows entry via walking
     pub walk: Option<bool>,
 
@@ -96,6 +112,7 @@ impl TileBuilder {
         TileBuilder {
             kind: None,
             opaque: None,
+            access: vec![],
             walk: None,
             fly: None,
             swim: None,
@@ -192,6 +209,7 @@ impl TileBuilder {
     /// Used for pathfinding calculations
     pub fn walk(mut self, value: bool) -> TileBuilder {
         self.walk = Some(value);
+        self.access.push(MoveType::Walk);
         self
     }
 
@@ -201,6 +219,7 @@ impl TileBuilder {
     /// Used for pathfinding calculations
     pub fn fly(mut self, value: bool) -> TileBuilder {
         self.fly = Some(value);
+        self.access.push(MoveType::Fly);
         self
     }
 
@@ -210,6 +229,7 @@ impl TileBuilder {
     /// Used for pathfinding calculations
     pub fn swim(mut self, value: bool) -> TileBuilder {
         self.swim = Some(value);
+        self.access.push(MoveType::Swim);
         self
     }
 
@@ -219,7 +239,10 @@ impl TileBuilder {
     pub fn add_movetype(mut self, movtype: &str, value: bool) -> TileBuilder {
         let prop = movtype.to_lowercase();
 
-        self.custom_movetypes.entry(prop).or_insert(value);
+        self.custom_movetypes.entry(prop.clone()).or_insert(value);
+        if value {
+            self.access.push(MoveType::Custom(prop));
+        }
 
         self
     }
@@ -242,6 +265,7 @@ impl TileBuilder {
             Ok(Tile {
                 kind: self.kind.unwrap(),
                 opaque: self.opaque.unwrap(),
+                access: self.access,
                 walk: self.walk.unwrap(),
                 fly: self.fly.unwrap(),
                 swim: self.swim.unwrap(),
@@ -293,6 +317,9 @@ pub struct Tile {
     /// The kind of tile it is.
     pub kind: String,
 
+    /// A vector that defines the movement types that can enter the Tile.
+    pub access: Vec<MoveType>,
+
     /// Whether or not the tile blocks vision.
     pub opaque: bool,
 
@@ -322,6 +349,7 @@ impl Tile {
     pub fn wall() -> Tile {
         Tile {
             kind: "wall".to_string(),
+            access: vec![],
             opaque: true,
             walk: false,
             fly: false,
@@ -334,6 +362,7 @@ impl Tile {
     pub fn floor() -> Tile {
         Tile {
             kind: "floor".to_string(),
+            access: vec![MoveType::Walk, MoveType::Fly],
             opaque: false,
             walk: true,
             fly: true,
@@ -346,6 +375,7 @@ impl Tile {
     pub fn water() -> Tile {
         Tile {
             kind: "water".to_string(),
+            access: vec![MoveType::Swim, MoveType::Fly],
             opaque: false,
             walk: false,
             fly: true,
@@ -358,6 +388,7 @@ impl Tile {
     pub fn lava() -> Tile {
         Tile {
             kind: "lava".to_string(),
+            access: vec![MoveType::Fly],
             opaque: false,
             walk: false,
             fly: true,
@@ -370,6 +401,7 @@ impl Tile {
     pub fn chasm() -> Tile {
         Tile {
             kind: "chasm".to_string(),
+            access: vec![MoveType::Fly],
             opaque: false,
             walk: false,
             fly: true,
@@ -384,7 +416,11 @@ impl Tile {
     pub fn add_movetype(&mut self, movtype: &str, value: bool) {
         let prop = movtype.to_lowercase();
 
-        self.other_movement.entry(prop).or_insert(value);
+        self.other_movement.entry(prop.clone()).or_insert(value);
+
+        if value {
+            self.access.push(MoveType::Custom(prop));
+        }
     }
 
     /// Check if an entity with the given move types can enter a tile.

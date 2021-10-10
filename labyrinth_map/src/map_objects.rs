@@ -8,22 +8,6 @@ use serde::{Deserialize, Serialize};
 mod tiles;
 pub use tiles::*;
 
-/// Enum defining possible movement methods
-#[derive(PartialEq, Eq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize, Clone)]
-pub enum MoveType {
-    /// variant for walking
-    Walk,
-
-    /// variant for flying
-    Fly,
-
-    /// variant for swimming
-    Swim,
-
-    /// variant for a user-defined movement type
-    Custom(String),
-}
-
 // TODO: Better Map struct documentation
 /// Labyrinth2D struct, the output of the MapGenerator2D.
 ///
