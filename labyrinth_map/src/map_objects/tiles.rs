@@ -157,6 +157,11 @@ impl Tile {
             })
             .any(|move_type| self.access.contains(&move_type))
     }
+
+    /// Returns the accessibility of a tile
+    pub fn accessbility(&self) -> &HashSet<MoveType> {
+        &self.access
+    }
 }
 
 #[cfg(test)]
@@ -174,7 +179,6 @@ mod tests {
     }
     fn is_water(tile: Tile) {
         assert!(!tile.opaque);
-        println!("{:?}", tile.access);
         assert!(tile.access == set![MoveType::Swim, MoveType::Fly]);
     }
     fn is_lava(tile: Tile) {

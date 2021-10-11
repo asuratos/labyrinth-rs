@@ -1,10 +1,11 @@
 //! Module for map objects
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bracket_pathfinding::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[macro_use]
 mod tiles;
 pub use tiles::MoveType;
 use tiles::*;
@@ -120,6 +121,12 @@ impl Labyrinth2D {
     }
 
     // -------------------- Pathfinding functions -----------------
+    /// Checks if the tile at a given [`Point`] can be entered for an entity
+    /// with the specified movement types.
+    pub fn can_enter(&self, loc: Point, move_types: &[MoveType]) -> bool {
+        self.tile_at(loc).can_enter(move_types)
+    }
+
     /// Find the path between two [`Points`](Point) for an entity with multiple
     /// movement types.
     // TODO: Examples here
@@ -228,11 +235,11 @@ impl Labyrinth2D {
     }
 
     // ---------------- Map editing methods --------------
-    // /// Gets a reference to a tile at a given [`Point`](Point)
-    // fn tile_at(&self, loc: Point) -> &Tile {
-    //     let idx = self.point2d_to_index(loc);
-    //     &self.tiles[idx]
-    // }
+    /// Gets a reference to a tile at a given [`Point`](Point)
+    fn tile_at(&self, loc: Point) -> &Tile {
+        let idx = self.point2d_to_index(loc);
+        &self.tiles[idx]
+    }
 
     /// Gets a mutable reference to a tile at a given [`Point`](Point)
     fn tile_at_mut(&mut self, loc: Point) -> &mut Tile {
@@ -240,10 +247,30 @@ impl Labyrinth2D {
         &mut self.tiles[idx]
     }
 
+    /// Gets the accessibility of a tile at a given [`Point`]
+    pub fn tile_access(&self, loc: Point) -> &HashSet<MoveType> {
+        self.tile_at(loc).accessbility()
+    }
+
+    /// Gets the tile kind of the tile at a given [`Point`]
+    pub fn tile_kind(&self, loc: Point) -> &str {
+        &self.tile_at(loc).kind
+    }
+
+    /// Sets the kind of the tile at a given [`Point`]
+    pub fn set_tile_kind(&mut self, loc: Point, kind: &str) {
+        self.tile_at_mut(loc).kind = kind.to_lowercase();
+    }
+
+    /// Sets the opacity of a tile at a given [`Point`].
+    pub fn set_opacity(&mut self, loc: Point, opaque: bool) {
+        self.tile_at_mut(loc).opaque = opaque;
+    }
+
     /// Sets the tile at the given [`Point`](Point) to a [`Tile`].
     fn set_tile_at(&mut self, loc: Point, tile: Tile) {
-        let idx = self.point2d_to_index(loc);
-        self.tiles[idx] = tile;
+        // let idx = self.point2d_to_index(loc);
+        *self.tile_at_mut(loc) = tile;
         self.pathfinding_cache.clear();
     }
 
@@ -265,6 +292,11 @@ impl Labyrinth2D {
     /// Sets the tile at the given [`Point`](Point) to a basic lava tile.
     pub fn set_lava(&mut self, loc: Point) {
         self.set_tile_at(loc, Tile::lava());
+    }
+
+    /// Sets the tile at the given [`Point`](Point) to a basic chasm tile.
+    pub fn set_chasm(&mut self, loc: Point) {
+        self.set_tile_at(loc, Tile::chasm());
     }
 
     /// Adds a set of movetypes to a tile at the given [`Point`](Point).
@@ -651,6 +683,106 @@ mod tests {
     }
 
     // Map editing tests
+
+    #[test]
+    fn edit_opacity() {
+        let mut map = Labyrinth2D::new(3, 3);
+
+        let target = Point::new(1, 1);
+        let target_idx = map.point2d_to_index(target);
+
+        assert!(map.is_opaque(target_idx));
+        map.set_opacity(target, false);
+        assert!(!map.is_opaque(target_idx));
+    }
+
+    #[test]
+    fn edit_accessibility() {
+        let mut map = Labyrinth2D::new(3, 3);
+
+        let target = Point::new(1, 1);
+
+        assert!(!map.can_enter(target, &[MoveType::Walk]));
+
+        map.add_movetypes(target, &[MoveType::Walk]);
+        assert!(map.can_enter(target, &[MoveType::Walk]));
+
+        map.add_movetypes(target, &[MoveType::custom("dig")]);
+        assert!(map.can_enter(target, &[MoveType::custom("dig")]));
+    }
+
+    #[test]
+    fn edit_tile_kind() {
+        let mut map = Labyrinth2D::new(3, 3);
+
+        let target = Point::new(1, 1);
+
+        assert!(map.tile_kind(target) == "wall");
+        map.set_tile_kind(target, "crystal");
+        assert!(map.tile_kind(target) == "crystal");
+    }
+
+    #[test]
+    fn tile_kind_is_case_insensitive() {
+        let mut map = Labyrinth2D::new(3, 3);
+
+        let target = Point::new(1, 1);
+
+        assert!(map.tile_kind(target) == "wall");
+        map.set_tile_kind(target, "crystal");
+        assert!(map.tile_kind(target) == "crystal");
+        map.set_tile_kind(target, "Crystal");
+        assert!(map.tile_kind(target) == "crystal");
+    }
+
+    #[test]
+    fn test_set_floor() {
+        let mut map = Labyrinth2D::new(3, 3);
+
+        let target = Point::new(1, 1);
+        map.set_floor(target);
+        let tile = map.tile_at(target);
+
+        assert!(!tile.opaque);
+        assert!(map.tile_access(target) == &set![MoveType::Walk, MoveType::Fly]);
+    }
+
+    #[test]
+    fn test_set_water() {
+        let mut map = Labyrinth2D::new(3, 3);
+
+        let target = Point::new(1, 1);
+        map.set_water(target);
+        let tile = map.tile_at(target);
+
+        assert!(!tile.opaque);
+        assert!(map.tile_access(target) == &set![MoveType::Swim, MoveType::Fly]);
+    }
+
+    #[test]
+    fn test_set_lava() {
+        let mut map = Labyrinth2D::new(3, 3);
+
+        let target = Point::new(1, 1);
+        map.set_lava(target);
+        let tile = map.tile_at(target);
+
+        assert!(!tile.opaque);
+        assert!(map.tile_access(target) == &set![MoveType::Fly]);
+    }
+
+    #[test]
+    fn test_set_chasm() {
+        let mut map = Labyrinth2D::new(3, 3);
+
+        let target = Point::new(1, 1);
+        map.set_chasm(target);
+        let tile = map.tile_at(target);
+
+        assert!(!tile.opaque);
+        assert!(map.tile_access(target) == &set![MoveType::Fly]);
+    }
+
     #[test]
     fn editing_map_clears_cache() {
         let mut map = Labyrinth2D::new(10, 10);
@@ -677,5 +809,21 @@ mod tests {
         assert_eq!(map.pathfinding_cache.len(), 1);
         map.add_movetypes(Point::new(3, 3), &[MoveType::custom("something")]);
         assert_eq!(map.pathfinding_cache.len(), 0);
+
+        _path = map.find_path_fly(start, end);
+        assert_eq!(map.pathfinding_cache.len(), 1);
+        map.remove_movetypes(Point::new(3, 3), &[MoveType::custom("something")]);
+        assert_eq!(map.pathfinding_cache.len(), 0);
+
+        // setters that don't affect pathfinding shouldn't clear cache
+        _path = map.find_path_fly(start, end);
+        assert_eq!(map.pathfinding_cache.len(), 1);
+        map.set_opacity(Point::new(3, 3), false);
+        assert_eq!(map.pathfinding_cache.len(), 1);
+
+        _path = map.find_path_fly(start, end);
+        assert_eq!(map.pathfinding_cache.len(), 1);
+        map.set_tile_kind(Point::new(3, 3), "sometile");
+        assert_eq!(map.pathfinding_cache.len(), 1);
     }
 }
