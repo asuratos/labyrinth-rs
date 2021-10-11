@@ -1,9 +1,21 @@
 //! This module holds the [`Tile`] and [`TileBuilder`] structs.
 //!
 //!
-use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+
+macro_rules! set {
+    ( $( $x:expr ),* ) => {  // Match zero or more comma delimited items
+        {
+            let mut temp_set = HashSet::new();  // Create a mutable HashSet
+            $(
+                temp_set.insert($x); // Insert each item matched into the HashSet
+            )*
+            temp_set // Return the populated HashSet
+        }
+    };
+}
 
 /// Enum defining possible movement methods
 #[derive(PartialEq, Eq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize, Clone)]
@@ -84,20 +96,20 @@ pub struct TileBuilder {
     /// The opacity of the tile to be built, used to perform FoV calculations.
     pub opaque: Option<bool>,
 
-    pub access: Vec<MoveType>,
+    /// A vector of MoveTypes that specify which ones can access this tile.
+    pub access: HashSet<MoveType>,
+    // /// Whether or not the tile to be built allows entry via walking
+    // pub walk: Option<bool>,
 
-    /// Whether or not the tile to be built allows entry via walking
-    pub walk: Option<bool>,
+    // /// Whether or not the tile to be built allows entry via flying
+    // pub fly: Option<bool>,
 
-    /// Whether or not the tile to be built allows entry via flying
-    pub fly: Option<bool>,
+    // /// Whether or not the tile to be built allows entry via swimming
+    // pub swim: Option<bool>,
 
-    /// Whether or not the tile to be built allows entry via swimming
-    pub swim: Option<bool>,
-
-    /// A hashmap containing all user-defined movement methods, set using the
-    /// [`TileBuilder::add_movetype`](TileBuilder::add_movetype) method
-    pub custom_movetypes: HashMap<String, bool>,
+    // /// A hashmap containing all user-defined movement methods, set using the
+    // /// [`TileBuilder::add_movetype`](TileBuilder::add_movetype) method
+    // pub custom_movetypes: HashMap<String, bool>,
 }
 
 impl Default for TileBuilder {
@@ -112,11 +124,11 @@ impl TileBuilder {
         TileBuilder {
             kind: None,
             opaque: None,
-            access: vec![],
-            walk: None,
-            fly: None,
-            swim: None,
-            custom_movetypes: HashMap::new(),
+            access: HashSet::new(),
+            // walk: None,
+            // fly: None,
+            // swim: None,
+            // custom_movetypes: HashMap::new(),
         }
     }
 
@@ -124,12 +136,7 @@ impl TileBuilder {
     /// - blocks vision
     /// - impassable
     pub fn wall() -> TileBuilder {
-        TileBuilder::new()
-            .kind("wall")
-            .opaque(true)
-            .walk(false)
-            .fly(false)
-            .swim(false)
+        TileBuilder::new().kind("wall").opaque(true)
     }
 
     /// Initializes a TileBuilder with the same properties as a basic floor tile:
@@ -141,7 +148,6 @@ impl TileBuilder {
             .opaque(false)
             .walk(true)
             .fly(true)
-            .swim(false)
     }
 
     /// Initializes a TileBuilder with the same properties as a basic water tile:
@@ -151,7 +157,6 @@ impl TileBuilder {
         TileBuilder::new()
             .kind("water")
             .opaque(false)
-            .walk(false)
             .fly(true)
             .swim(true)
     }
@@ -160,24 +165,14 @@ impl TileBuilder {
     /// - doesn't block vision
     /// - passable to flyers only
     pub fn lava() -> TileBuilder {
-        TileBuilder::new()
-            .kind("lava")
-            .opaque(false)
-            .walk(false)
-            .fly(true)
-            .swim(false)
+        TileBuilder::new().kind("lava").opaque(false).fly(true)
     }
 
     /// Initializes a TileBuilder with the same properties as a basic chasm tile:
     /// - doesn't block vision
     /// - passable to flyers only
     pub fn chasm() -> TileBuilder {
-        TileBuilder::new()
-            .kind("chasm")
-            .opaque(false)
-            .walk(false)
-            .fly(true)
-            .swim(false)
+        TileBuilder::new().kind("chasm").opaque(false).fly(true)
     }
 
     /// Sets the kind of the tile to be built. Essentially its name.
@@ -208,8 +203,8 @@ impl TileBuilder {
     ///
     /// Used for pathfinding calculations
     pub fn walk(mut self, value: bool) -> TileBuilder {
-        self.walk = Some(value);
-        self.access.push(MoveType::Walk);
+        // self.walk = Some(value);
+        self.access.insert(MoveType::Walk);
         self
     }
 
@@ -218,8 +213,8 @@ impl TileBuilder {
     ///
     /// Used for pathfinding calculations
     pub fn fly(mut self, value: bool) -> TileBuilder {
-        self.fly = Some(value);
-        self.access.push(MoveType::Fly);
+        // self.fly = Some(value);
+        self.access.insert(MoveType::Fly);
         self
     }
 
@@ -228,8 +223,8 @@ impl TileBuilder {
     ///
     /// Used for pathfinding calculations
     pub fn swim(mut self, value: bool) -> TileBuilder {
-        self.swim = Some(value);
-        self.access.push(MoveType::Swim);
+        // self.swim = Some(value);
+        self.access.insert(MoveType::Swim);
         self
     }
 
@@ -239,9 +234,9 @@ impl TileBuilder {
     pub fn add_movetype(mut self, movtype: &str, value: bool) -> TileBuilder {
         let prop = movtype.to_lowercase();
 
-        self.custom_movetypes.entry(prop.clone()).or_insert(value);
+        // self.custom_movetypes.entry(prop.clone()).or_insert(value);
         if value {
-            self.access.push(MoveType::Custom(prop));
+            self.access.insert(MoveType::Custom(prop));
         }
 
         self
@@ -249,11 +244,10 @@ impl TileBuilder {
 
     /// Checks if all required fields on the TileBuilder have been set.
     pub fn is_fully_initialized(&self) -> bool {
-        self.kind.is_some()
-            && self.opaque.is_some()
-            && self.walk.is_some()
-            && self.fly.is_some()
-            && self.swim.is_some()
+        self.kind.is_some() && self.opaque.is_some()
+        // && self.walk.is_some()
+        // && self.fly.is_some()
+        // && self.swim.is_some()
     }
 
     /// Attempts to build the tile. Returns an error if any required field
@@ -266,10 +260,10 @@ impl TileBuilder {
                 kind: self.kind.unwrap(),
                 opaque: self.opaque.unwrap(),
                 access: self.access,
-                walk: self.walk.unwrap(),
-                fly: self.fly.unwrap(),
-                swim: self.swim.unwrap(),
-                other_movement: self.custom_movetypes,
+                // walk: self.walk.unwrap(),
+                // fly: self.fly.unwrap(),
+                // swim: self.swim.unwrap(),
+                // other_movement: self.custom_movetypes,
             })
         }
     }
@@ -311,30 +305,28 @@ impl TileBuilder {
 ///     Ok(())
 /// }
 /// ```
-
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
     /// The kind of tile it is.
     pub kind: String,
 
     /// A vector that defines the movement types that can enter the Tile.
-    pub access: Vec<MoveType>,
+    pub access: HashSet<MoveType>,
 
     /// Whether or not the tile blocks vision.
     pub opaque: bool,
+    // /// Whether or not a walking entity can access the tile.
+    // pub walk: bool,
 
-    /// Whether or not a walking entity can access the tile.
-    pub walk: bool,
+    // /// Whether or not a flying entity can access the tile.
+    // pub fly: bool,
 
-    /// Whether or not a flying entity can access the tile.
-    pub fly: bool,
+    // /// Whether or not a swimming entity can access the tile.
+    // pub swim: bool,
 
-    /// Whether or not a swimming entity can access the tile.
-    pub swim: bool,
-
-    /// Any other user-defined alternate forms of movement and their accessibility
-    /// for that form of movement.
-    pub other_movement: HashMap<String, bool>,
+    // /// Any other user-defined alternate forms of movement and their accessibility
+    // /// for that form of movement.
+    // pub other_movement: HashMap<String, bool>,
 }
 
 impl Default for Tile {
@@ -349,12 +341,12 @@ impl Tile {
     pub fn wall() -> Tile {
         Tile {
             kind: "wall".to_string(),
-            access: vec![],
+            access: set![],
             opaque: true,
-            walk: false,
-            fly: false,
-            swim: false,
-            other_movement: HashMap::new(),
+            // walk: false,
+            // fly: false,
+            // swim: false,
+            // other_movement: HashMap::new(),
         }
     }
 
@@ -362,12 +354,12 @@ impl Tile {
     pub fn floor() -> Tile {
         Tile {
             kind: "floor".to_string(),
-            access: vec![MoveType::Walk, MoveType::Fly],
+            access: set![MoveType::Walk, MoveType::Fly],
             opaque: false,
-            walk: true,
-            fly: true,
-            swim: false,
-            other_movement: HashMap::new(),
+            // walk: true,
+            // fly: true,
+            // swim: false,
+            // other_movement: HashMap::new(),
         }
     }
 
@@ -375,12 +367,12 @@ impl Tile {
     pub fn water() -> Tile {
         Tile {
             kind: "water".to_string(),
-            access: vec![MoveType::Swim, MoveType::Fly],
+            access: set![MoveType::Swim, MoveType::Fly],
             opaque: false,
-            walk: false,
-            fly: true,
-            swim: true,
-            other_movement: HashMap::new(),
+            // walk: false,
+            // fly: true,
+            // swim: true,
+            // other_movement: HashMap::new(),
         }
     }
 
@@ -388,12 +380,12 @@ impl Tile {
     pub fn lava() -> Tile {
         Tile {
             kind: "lava".to_string(),
-            access: vec![MoveType::Fly],
+            access: set![MoveType::Fly],
             opaque: false,
-            walk: false,
-            fly: true,
-            swim: false,
-            other_movement: HashMap::new(),
+            // walk: false,
+            // fly: true,
+            // swim: false,
+            // other_movement: HashMap::new(),
         }
     }
 
@@ -401,12 +393,12 @@ impl Tile {
     pub fn chasm() -> Tile {
         Tile {
             kind: "chasm".to_string(),
-            access: vec![MoveType::Fly],
+            access: set![MoveType::Fly],
             opaque: false,
-            walk: false,
-            fly: true,
-            swim: false,
-            other_movement: HashMap::new(),
+            // walk: false,
+            // fly: true,
+            // swim: false,
+            // other_movement: HashMap::new(),
         }
     }
 
@@ -416,18 +408,16 @@ impl Tile {
     pub fn add_movetype(&mut self, movtype: &str, value: bool) {
         let prop = movtype.to_lowercase();
 
-        self.other_movement.entry(prop.clone()).or_insert(value);
+        // self.other_movement.entry(prop.clone()).or_insert(value);
 
         if value {
-            self.access.push(MoveType::Custom(prop));
+            self.access.insert(MoveType::Custom(prop));
         }
     }
 
     /// Check if an entity with the given move types can enter a tile.
     ///
-    /// Returns an error if any of the movement types specified are not
-    /// specified for the tile.
-    ///
+    /// If a custom movetype is not found on the tile, it treats it as false
     /// # Example
     /// ```rust
     /// fn main() -> Result<(), String> {
@@ -436,33 +426,37 @@ impl Tile {
     ///     let tile = TileBuilder::water().build()?;
     ///     
     ///     // Returns Ok(false) when inaccessible by movement type
-    ///     assert!(!tile.can_enter(&[MoveType::Walk])?);
+    ///     assert!(!tile.can_enter(&[MoveType::Walk]));
     ///
     ///     // Returns Ok(true) when accessible by movement type
-    ///     assert!(tile.can_enter(&[MoveType::Fly])?);
+    ///     assert!(tile.can_enter(&[MoveType::Fly]));
     ///
     ///     // ... but will return an error on an undefined movement type
-    ///     assert!(tile
-    ///         .can_enter(&[MoveType::Custom("undefined_movetype".to_string())])
-    ///         .is_err());
+    ///     assert!(!tile
+    ///         .can_enter(&[MoveType::Custom("undefined_movetype".to_string())]));
     ///
     ///     Ok(())
     /// }
     /// ```
-    pub fn can_enter(&self, move_types: &[MoveType]) -> Result<bool, String> {
+    pub fn can_enter(&self, move_types: &[MoveType]) -> bool {
         // TODO: This should return a user-facing error
         move_types
             .iter()
-            .map(|move_type| match move_type {
-                MoveType::Walk => Ok(self.walk),
-                MoveType::Fly => Ok(self.fly),
-                MoveType::Swim => Ok(self.swim),
-                MoveType::Custom(custom) => self.other_movement.get(custom).copied().ok_or(
-                    format!("Movement type {} does not exist for this tile", custom),
-                ),
-            }) // Vec<Result<bool, String>>
-            .collect::<Result<Vec<bool>, String>>()
-            .map(|resvec| resvec.iter().any(|res| *res))
+            .any(|move_type| self.access.contains(move_type))
+
+        // move_types
+        //     .iter()
+        //     .map(|move_type| match move_type {
+        //         MoveType::Walk => Ok(self.walk),
+        //         MoveType::Fly => Ok(self.fly),
+        //         MoveType::Swim => Ok(self.swim),
+        //         MoveType::Custom(custom) => self.other_movement.get(custom).copied().ok_or(
+        //             format!("Movement type {} does not exist for this tile", custom),
+        //         ),
+        //     }) // Vec<Result<bool, String>>
+        //     .collect::<Result<Vec<bool>, String>>()
+        //     .map(|resvec| resvec.iter().any(|res| *res))
+        // true
     }
 }
 
@@ -473,38 +467,44 @@ mod tests {
     // Tile tests
     fn is_wall(tile: Tile) {
         assert!(tile.opaque);
-        assert!(!tile.walk);
-        assert!(!tile.fly);
-        assert!(!tile.swim);
-        assert_eq!(tile.other_movement, HashMap::new());
+        assert!(tile.access == set![])
+        // assert!(!tile.walk);
+        // assert!(!tile.fly);
+        // assert!(!tile.swim);
+        // assert_eq!(tile.other_movement, HashMap::new());
     }
     fn is_floor(tile: Tile) {
         assert!(!tile.opaque);
-        assert!(tile.walk);
-        assert!(tile.fly);
-        assert!(!tile.swim);
-        assert_eq!(tile.other_movement, HashMap::new());
+        assert!(tile.access == set![MoveType::Walk, MoveType::Fly]);
+        // assert!(tile.walk);
+        // assert!(tile.fly);
+        // assert!(!tile.swim);
+        // assert_eq!(tile.other_movement, HashMap::new());
     }
     fn is_water(tile: Tile) {
         assert!(!tile.opaque);
-        assert!(!tile.walk);
-        assert!(tile.fly);
-        assert!(tile.swim);
-        assert_eq!(tile.other_movement, HashMap::new());
+        println!("{:?}", tile.access);
+        assert!(tile.access == set![MoveType::Swim, MoveType::Fly]);
+        // assert!(!tile.walk);
+        // assert!(tile.fly);
+        // assert!(tile.swim);
+        // assert_eq!(tile.other_movement, HashMap::new());
     }
     fn is_lava(tile: Tile) {
         assert!(!tile.opaque);
-        assert!(!tile.walk);
-        assert!(tile.fly);
-        assert!(!tile.swim);
-        assert_eq!(tile.other_movement, HashMap::new());
+        assert!(tile.access == set![MoveType::Fly]);
+        // assert!(!tile.walk);
+        // assert!(tile.fly);
+        // assert!(!tile.swim);
+        // assert_eq!(tile.other_movement, HashMap::new());
     }
     fn is_chasm(tile: Tile) {
         assert!(!tile.opaque);
-        assert!(!tile.walk);
-        assert!(tile.fly);
-        assert!(!tile.swim);
-        assert_eq!(tile.other_movement, HashMap::new());
+        assert!(tile.access == set![MoveType::Fly]);
+        // assert!(!tile.walk);
+        // assert!(tile.fly);
+        // assert!(!tile.swim);
+        // assert_eq!(tile.other_movement, HashMap::new());
     }
 
     #[test]
@@ -562,7 +562,7 @@ mod tests {
     fn tile_enterable_with_one_matching_movtype() -> Result<(), String> {
         let custom_tile = TileBuilder::floor().kind("sometile").build()?;
 
-        assert!(custom_tile.can_enter(&[MoveType::Walk])?);
+        assert!(custom_tile.can_enter(&[MoveType::Walk]));
 
         Ok(())
     }
@@ -571,7 +571,7 @@ mod tests {
     fn tile_enterable_with_multiple_matching_movtype() -> Result<(), String> {
         let custom_tile = TileBuilder::floor().kind("sometile").build()?;
 
-        assert!(custom_tile.can_enter(&[MoveType::Walk, MoveType::Fly])?);
+        assert!(custom_tile.can_enter(&[MoveType::Walk, MoveType::Fly]));
 
         Ok(())
     }
@@ -580,7 +580,7 @@ mod tests {
     fn tile_enterable_with_matching_and_unmatching_movtype() -> Result<(), String> {
         let custom_tile = TileBuilder::floor().kind("sometile").build()?;
 
-        assert!(custom_tile.can_enter(&[MoveType::Walk, MoveType::Swim])?);
+        assert!(custom_tile.can_enter(&[MoveType::Walk, MoveType::Swim]));
 
         Ok(())
     }
@@ -589,7 +589,7 @@ mod tests {
     fn tile_enterable_with_custom_movetype() -> Result<(), String> {
         let custom_tile = TileBuilder::wall().add_movetype("dig", true).build()?;
 
-        assert!(custom_tile.can_enter(&[MoveType::Custom("dig".to_string())])?);
+        assert!(custom_tile.can_enter(&[MoveType::Custom("dig".to_string())]));
 
         Ok(())
     }
@@ -599,35 +599,16 @@ mod tests {
         let mut tile = Tile::wall();
         tile.add_movetype("dig", true);
 
-        assert!(tile.can_enter(&[MoveType::Custom("dig".to_string())])?);
+        assert!(tile.can_enter(&[MoveType::Custom("dig".to_string())]));
         Ok(())
     }
 
     #[test]
     fn tile_not_enterable() -> Result<(), String> {
         let custom_tile = TileBuilder::floor().kind("sometile").build()?;
-        let res = custom_tile.can_enter(&[MoveType::Swim])?;
+        let res = custom_tile.can_enter(&[MoveType::Swim]);
 
         assert!(!res);
-        Ok(())
-    }
-
-    #[test]
-    fn undefined_movtype_causes_error() -> Result<(), String> {
-        let custom_tile = TileBuilder::floor().kind("sometile").build()?;
-        let res = custom_tile.can_enter(&[MoveType::Custom("undefined".to_string())]);
-
-        assert!(res.is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn undefined_movtype_always_causes_error() -> Result<(), String> {
-        let custom_tile = TileBuilder::floor().kind("sometile").build()?;
-        let res =
-            custom_tile.can_enter(&[MoveType::Walk, MoveType::Custom("undefined".to_string())]);
-
-        assert!(res.is_err());
         Ok(())
     }
 

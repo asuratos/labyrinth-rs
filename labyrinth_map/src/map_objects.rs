@@ -59,7 +59,7 @@ impl BaseMap for Labyrinth2D {
             // map points -> vector indices
             .map(|pt| self.point2d_to_index(pt))
             // filter to only tiles that are walkable
-            .filter(|&pos| self.tiles[pos].walk)
+            .filter(|&pos| self.tiles[pos].can_enter(&[MoveType::Walk]))
             // package into final struct
             .map(|pos| (pos, 1.0))
             // finally, collect into the final SmallVec
@@ -138,7 +138,7 @@ impl Labyrinth2D {
         if !self.pathfinding_cache.contains_key(&move_types_vec) {
             // if not, then add it to the cache
 
-            let projection = InternalLabyrinth2D::from_map(self, move_types_vec.as_slice())?;
+            let projection = InternalLabyrinth2D::from_map(self, move_types_vec.as_slice());
             self.pathfinding_cache
                 .insert(move_types_vec.clone(), projection);
         }
@@ -278,20 +278,20 @@ struct InternalLabyrinth2D {
 }
 
 impl InternalLabyrinth2D {
-    fn from_map(map: &Labyrinth2D, move_types: &[MoveType]) -> Result<InternalLabyrinth2D, String> {
+    fn from_map(map: &Labyrinth2D, move_types: &[MoveType]) -> InternalLabyrinth2D {
         let enterable = map
             .tiles
             .iter()
             .map(|tile| tile.can_enter(move_types))
-            .collect::<Result<Vec<bool>, String>>()?;
+            .collect::<Vec<bool>>();
 
         let opaque: Vec<bool> = map.tiles.iter().map(|tile| tile.opaque).collect();
 
-        Ok(InternalLabyrinth2D {
+        InternalLabyrinth2D {
             opaque,
             enterable,
             dimensions: map.dimensions(),
-        })
+        }
     }
 }
 
@@ -377,7 +377,7 @@ mod tests {
 
     fn prepare_testmap_3x3_for_movtype(movtypes: &[MoveType]) -> InternalLabyrinth2D {
         let map = prepare_testmap_3x3();
-        InternalLabyrinth2D::from_map(&map, movtypes).unwrap()
+        InternalLabyrinth2D::from_map(&map, movtypes)
     }
 
     fn smallvecs_are_equal<T: Copy + PartialEq>(
@@ -488,8 +488,8 @@ mod tests {
     #[test]
     fn no_movement_can_enter_walls() {
         let walkmap = Labyrinth2D::new(3, 3);
-        let flymap = InternalLabyrinth2D::from_map(&walkmap, &[MoveType::Fly]).unwrap();
-        let swimmap = InternalLabyrinth2D::from_map(&walkmap, &[MoveType::Swim]).unwrap();
+        let flymap = InternalLabyrinth2D::from_map(&walkmap, &[MoveType::Fly]);
+        let swimmap = InternalLabyrinth2D::from_map(&walkmap, &[MoveType::Swim]);
 
         let center = walkmap.point2d_to_index(Point::new(1, 1));
 
@@ -519,7 +519,7 @@ mod tests {
         ];
 
         let phasemap =
-            InternalLabyrinth2D::from_map(&map, &[MoveType::Custom("phasing".to_string())])?;
+            InternalLabyrinth2D::from_map(&map, &[MoveType::Custom("phasing".to_string())]);
 
         assert!(smallvecs_are_equal(
             phasemap.get_available_exits(center),
