@@ -1,6 +1,6 @@
 //! TODO: Crate level documentation
-//! 
-//! 
+//!
+//!
 
 #![warn(missing_docs)]
 
