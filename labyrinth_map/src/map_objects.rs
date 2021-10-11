@@ -6,7 +6,8 @@ use bracket_pathfinding::prelude::*;
 use serde::{Deserialize, Serialize};
 
 mod tiles;
-pub use tiles::*;
+pub use tiles::MoveType;
+use tiles::*;
 
 // TODO: Better Map struct documentation
 /// Labyrinth2D struct, the output of the MapGenerator2D.
@@ -107,7 +108,44 @@ impl Labyrinth2D {
         }
     }
 
+    /// Constructs a new Labyrinth with a size defined by a 2d [`Point`].
+    ///
+    /// Initial Tiles are all floors.
+    pub fn new_empty_from_dims(dimensions: Point) -> Labyrinth2D {
+        Labyrinth2D {
+            tiles: vec![Tile::floor(); (dimensions.x * dimensions.y) as usize],
+            dimensions,
+            pathfinding_cache: HashMap::new(),
+        }
+    }
+
     // -------------------- Pathfinding functions -----------------
+    /// Find the path between two [`Points`](Point) for an entity with multiple
+    /// movement types.
+    // TODO: Examples here
+    pub fn find_path(
+        &mut self,
+        start: Point,
+        end: Point,
+        move_types: &[MoveType],
+    ) -> NavigationPath {
+        // If the movetype is only walk, then pathfinding can be done on
+        // the Map as-is
+        if move_types == [MoveType::Walk] {
+            return self.find_path_walk(start, end);
+        }
+
+        // Get the map from the cache if it exists, add it otherwise
+        let internal_map = self.get_from_cache_or_add(move_types);
+
+        // then pathfind over it and return the path
+        a_star_search(
+            internal_map.point2d_to_index(start),
+            internal_map.point2d_to_index(end),
+            internal_map,
+        )
+    }
+
     /// Find the path between two [`Points`](Point) by walking
     pub fn find_path_walk(&self, start: Point, end: Point) -> NavigationPath {
         a_star_search(
@@ -142,32 +180,6 @@ impl Labyrinth2D {
 
         // then get the map from the cache
         self.pathfinding_cache.get(&move_types_vec).unwrap()
-    }
-
-    /// Find the path between two [`Points`](Point) for an entity with multiple
-    /// movement types.
-    // TODO: Examples here
-    pub fn find_path(
-        &mut self,
-        start: Point,
-        end: Point,
-        move_types: &[MoveType],
-    ) -> NavigationPath {
-        // If the movetype is only walk, then pathfinding can be done on
-        // the Map as-is
-        if move_types == [MoveType::Walk] {
-            return self.find_path_walk(start, end);
-        }
-
-        // Get the map from the cache if it exists, add it otherwise
-        let internal_map = self.get_from_cache_or_add(move_types);
-
-        // then pathfind over it and return the path
-        a_star_search(
-            internal_map.point2d_to_index(start),
-            internal_map.point2d_to_index(end),
-            internal_map,
-        )
     }
 
     /// Returns Dijkstra map for a set of starting [`Points`](Point), given
@@ -210,14 +222,26 @@ impl Labyrinth2D {
         self.dijkstra_map(starts, &[MoveType::Fly])
     }
 
-    /// Constructs the Dijkstra map for an entity that can only fly
+    /// Constructs the Dijkstra map for an entity that can only swim
     pub fn dijkstra_map_swim(&mut self, starts: &[Point]) -> DijkstraMap {
         self.dijkstra_map(starts, &[MoveType::Swim])
     }
 
     // ---------------- Map editing methods --------------
+    // /// Gets a reference to a tile at a given [`Point`](Point)
+    // fn tile_at(&self, loc: Point) -> &Tile {
+    //     let idx = self.point2d_to_index(loc);
+    //     &self.tiles[idx]
+    // }
+
+    /// Gets a mutable reference to a tile at a given [`Point`](Point)
+    fn tile_at_mut(&mut self, loc: Point) -> &mut Tile {
+        let idx = self.point2d_to_index(loc);
+        &mut self.tiles[idx]
+    }
+
     /// Sets the tile at the given [`Point`](Point) to a [`Tile`].
-    pub fn set_tile_at(&mut self, loc: Point, tile: Tile) {
+    fn set_tile_at(&mut self, loc: Point, tile: Tile) {
         let idx = self.point2d_to_index(loc);
         self.tiles[idx] = tile;
         self.pathfinding_cache.clear();
@@ -243,12 +267,24 @@ impl Labyrinth2D {
         self.set_tile_at(loc, Tile::lava());
     }
 
-    /// Adds a specified movetype to every [`Tile`] in the entire [`Labyrinth2D`]
-    pub fn add_movetype(&mut self, move_type: &str, default_value: bool) {
-        self.tiles
-            .iter_mut()
-            .for_each(|tile| tile.add_movetype(move_type, default_value));
-        self.pathfinding_cache.clear();
+    /// Adds a set of movetypes to a tile at the given [`Point`](Point).
+    pub fn add_movetypes(&mut self, loc: Point, move_types: &[MoveType]) {
+        for move_type in move_types {
+            if self.tile_at_mut(loc).add_movetype(move_type) {
+                // If the addition was successful, then the cache needs to be cleared
+                self.pathfinding_cache.clear();
+            }
+        }
+    }
+
+    /// Removes a set of movetypes to a tile at the given [`Point`](Point).
+    pub fn remove_movetypes(&mut self, loc: Point, move_types: &[MoveType]) {
+        for move_type in move_types {
+            if self.tile_at_mut(loc).remove_movetype(move_type) {
+                // If the removal was successful, then the cache needs to be cleared
+                self.pathfinding_cache.clear();
+            }
+        }
     }
 }
 
@@ -486,14 +522,11 @@ mod tests {
     #[test]
     fn custom_movement_types_are_usable() -> Result<(), String> {
         let mut map = Labyrinth2D::new(3, 3);
-        let phasewall = TileBuilder::wall()
-            .kind("phasewall")
-            .add_movetype("phasing", true)
-            .build()?;
+
+        let mut phasewall = Tile::wall();
+        phasewall.add_movetype(&MoveType::custom("phasing"));
 
         let center = map.point2d_to_index(Point::new(1, 1));
-
-        map.add_movetype("phasing", false);
 
         map.set_tile_at(Point::new(0, 1), phasewall.clone());
         map.set_tile_at(Point::new(1, 0), phasewall.clone());
@@ -503,8 +536,7 @@ mod tests {
             (map.point2d_to_index(Point::new(1, 0)), 1.0),
         ];
 
-        let phasemap =
-            InternalLabyrinth2D::from_map(&map, &[MoveType::Custom("phasing".to_string())]);
+        let phasemap = InternalLabyrinth2D::from_map(&map, &[MoveType::custom("phasing")]);
 
         assert!(smallvecs_are_equal(
             phasemap.get_available_exits(center),
@@ -643,7 +675,7 @@ mod tests {
 
         _path = map.find_path_fly(start, end);
         assert_eq!(map.pathfinding_cache.len(), 1);
-        map.add_movetype("something", false);
+        map.add_movetypes(Point::new(3, 3), &[MoveType::custom("something")]);
         assert_eq!(map.pathfinding_cache.len(), 0);
     }
 }
