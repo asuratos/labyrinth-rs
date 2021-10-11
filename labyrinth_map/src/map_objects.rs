@@ -119,18 +119,15 @@ impl Labyrinth2D {
 
     /// Find the path between two [`Points`](Point) by flying
     pub fn find_path_fly(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path(start, end, &[MoveType::Fly]).unwrap()
+        self.find_path(start, end, &[MoveType::Fly])
     }
 
     /// Find the path between two [`Points`](Point) by swimming
     pub fn find_path_swim(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path(start, end, &[MoveType::Swim]).unwrap()
+        self.find_path(start, end, &[MoveType::Swim])
     }
 
-    fn get_from_cache_or_add(
-        &mut self,
-        move_types: &[MoveType],
-    ) -> Result<&InternalLabyrinth2D, String> {
+    fn get_from_cache_or_add(&mut self, move_types: &[MoveType]) -> &InternalLabyrinth2D {
         // Check if pathfinding over the movement type has been done before
         let mut move_types_vec = move_types.to_vec();
         move_types_vec.sort();
@@ -144,9 +141,7 @@ impl Labyrinth2D {
         }
 
         // then get the map from the cache
-        self.pathfinding_cache
-            .get(&move_types_vec)
-            .ok_or_else(|| "Unable to get from cache".to_string())
+        self.pathfinding_cache.get(&move_types_vec).unwrap()
     }
 
     /// Find the path between two [`Points`](Point) for an entity with multiple
@@ -157,35 +152,31 @@ impl Labyrinth2D {
         start: Point,
         end: Point,
         move_types: &[MoveType],
-    ) -> Result<NavigationPath, String> {
+    ) -> NavigationPath {
         // If the movetype is only walk, then pathfinding can be done on
         // the Map as-is
         if move_types == [MoveType::Walk] {
-            return Ok(self.find_path_walk(start, end));
+            return self.find_path_walk(start, end);
         }
 
         // Get the map from the cache if it exists, add it otherwise
-        let internal_map = self.get_from_cache_or_add(move_types)?;
+        let internal_map = self.get_from_cache_or_add(move_types);
 
         // then pathfind over it and return the path
-        Ok(a_star_search(
+        a_star_search(
             internal_map.point2d_to_index(start),
             internal_map.point2d_to_index(end),
             internal_map,
-        ))
+        )
     }
 
     /// Returns Dijkstra map for a set of starting [`Points`](Point), given
     /// the movement types of the entity.
     // TODO: Examples here
-    pub fn dijkstra_map(
-        &mut self,
-        starts: &[Point],
-        move_types: &[MoveType],
-    ) -> Result<DijkstraMap, String> {
+    pub fn dijkstra_map(&mut self, starts: &[Point], move_types: &[MoveType]) -> DijkstraMap {
         // if the MoveType is only walk, then it can be done on the map itself
         if move_types == [MoveType::Walk] {
-            return Ok(self.dijkstra_map_walk(starts));
+            return self.dijkstra_map_walk(starts);
         }
 
         let Point {
@@ -196,16 +187,10 @@ impl Labyrinth2D {
         let starts_idx: Vec<usize> = starts.iter().map(|&pt| self.point2d_to_index(pt)).collect();
 
         // Get the map from the cache if it exists, add it otherwise
-        let internal_map = self.get_from_cache_or_add(move_types)?;
+        let internal_map = self.get_from_cache_or_add(move_types);
 
         // Finally, return the Dijkstra map over that internal projection
-        Ok(DijkstraMap::new(
-            size_x,
-            size_y,
-            &starts_idx,
-            internal_map,
-            1024.0,
-        ))
+        DijkstraMap::new(size_x, size_y, &starts_idx, internal_map, 1024.0)
     }
 
     /// Constructs the Dijkstra map for an entity that can only walk
@@ -222,12 +207,12 @@ impl Labyrinth2D {
 
     /// Constructs the Dijkstra map for an entity that can only fly
     pub fn dijkstra_map_fly(&mut self, starts: &[Point]) -> DijkstraMap {
-        self.dijkstra_map(starts, &[MoveType::Fly]).unwrap()
+        self.dijkstra_map(starts, &[MoveType::Fly])
     }
 
     /// Constructs the Dijkstra map for an entity that can only fly
     pub fn dijkstra_map_swim(&mut self, starts: &[Point]) -> DijkstraMap {
-        self.dijkstra_map(starts, &[MoveType::Swim]).unwrap()
+        self.dijkstra_map(starts, &[MoveType::Swim])
     }
 
     // ---------------- Map editing methods --------------
@@ -538,7 +523,7 @@ mod tests {
         let end = Point::new(5, 5);
 
         let mut _path = map.find_path_walk(start, end);
-        _path = map.find_path(start, end, &[MoveType::Walk]).unwrap();
+        _path = map.find_path(start, end, &[MoveType::Walk]);
 
         assert_eq!(map.pathfinding_cache.len(), 0);
     }
@@ -592,7 +577,7 @@ mod tests {
         let start = Point::new(1, 1);
 
         let mut _d_map = map.dijkstra_map_walk(&[start]);
-        _d_map = map.dijkstra_map(&[start], &[MoveType::Walk]).unwrap();
+        _d_map = map.dijkstra_map(&[start], &[MoveType::Walk]);
 
         assert_eq!(map.pathfinding_cache.len(), 0);
     }

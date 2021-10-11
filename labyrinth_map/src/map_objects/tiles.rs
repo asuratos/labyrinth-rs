@@ -47,9 +47,6 @@ pub enum MoveType {
 ///     let wall_manual = TileBuilder::new()
 ///         .kind("wall")
 ///         .opaque(true)
-///         .walk(false)
-///         .fly(false)
-///         .swim(false)
 ///         .build()?;
 ///
 ///     // Building a tile from a template
@@ -125,10 +122,6 @@ impl TileBuilder {
             kind: None,
             opaque: None,
             access: HashSet::new(),
-            // walk: None,
-            // fly: None,
-            // swim: None,
-            // custom_movetypes: HashMap::new(),
         }
     }
 
@@ -143,36 +136,28 @@ impl TileBuilder {
     /// - doesn't block vision
     /// - passable to walkers and flyers
     pub fn floor() -> TileBuilder {
-        TileBuilder::new()
-            .kind("floor")
-            .opaque(false)
-            .walk(true)
-            .fly(true)
+        TileBuilder::new().kind("floor").opaque(false).walk().fly()
     }
 
     /// Initializes a TileBuilder with the same properties as a basic water tile:
     /// - doesn't block vision
     /// - passable to swimmers and flyers
     pub fn water() -> TileBuilder {
-        TileBuilder::new()
-            .kind("water")
-            .opaque(false)
-            .fly(true)
-            .swim(true)
+        TileBuilder::new().kind("water").opaque(false).fly().swim()
     }
 
     /// Initializes a TileBuilder with the same properties as a basic lava tile:
     /// - doesn't block vision
     /// - passable to flyers only
     pub fn lava() -> TileBuilder {
-        TileBuilder::new().kind("lava").opaque(false).fly(true)
+        TileBuilder::new().kind("lava").opaque(false).fly()
     }
 
     /// Initializes a TileBuilder with the same properties as a basic chasm tile:
     /// - doesn't block vision
     /// - passable to flyers only
     pub fn chasm() -> TileBuilder {
-        TileBuilder::new().kind("chasm").opaque(false).fly(true)
+        TileBuilder::new().kind("chasm").opaque(false).fly()
     }
 
     /// Sets the kind of the tile to be built. Essentially its name.
@@ -201,9 +186,8 @@ impl TileBuilder {
     /// Sets walk accessibility to the tile. Whether or not it can be accessed
     /// via walking.
     ///
-    /// Used for pathfinding calculations
-    pub fn walk(mut self, value: bool) -> TileBuilder {
-        // self.walk = Some(value);
+    /// Used for pathfinding calculations.
+    pub fn walk(mut self) -> TileBuilder {
         self.access.insert(MoveType::Walk);
         self
     }
@@ -211,9 +195,8 @@ impl TileBuilder {
     /// Sets fly accessibility to the tile. Whether or not it can be accessed
     /// via flying.
     ///
-    /// Used for pathfinding calculations
-    pub fn fly(mut self, value: bool) -> TileBuilder {
-        // self.fly = Some(value);
+    /// Used for pathfinding calculations.
+    pub fn fly(mut self) -> TileBuilder {
         self.access.insert(MoveType::Fly);
         self
     }
@@ -221,9 +204,8 @@ impl TileBuilder {
     /// Sets swim accessibility to the tile. Whether or not it can be accessed
     /// via swimming.
     ///
-    /// Used for pathfinding calculations
-    pub fn swim(mut self, value: bool) -> TileBuilder {
-        // self.swim = Some(value);
+    /// Used for pathfinding calculations.
+    pub fn swim(mut self) -> TileBuilder {
         self.access.insert(MoveType::Swim);
         self
     }
@@ -234,7 +216,6 @@ impl TileBuilder {
     pub fn add_movetype(mut self, movtype: &str, value: bool) -> TileBuilder {
         let prop = movtype.to_lowercase();
 
-        // self.custom_movetypes.entry(prop.clone()).or_insert(value);
         if value {
             self.access.insert(MoveType::Custom(prop));
         }
@@ -245,9 +226,6 @@ impl TileBuilder {
     /// Checks if all required fields on the TileBuilder have been set.
     pub fn is_fully_initialized(&self) -> bool {
         self.kind.is_some() && self.opaque.is_some()
-        // && self.walk.is_some()
-        // && self.fly.is_some()
-        // && self.swim.is_some()
     }
 
     /// Attempts to build the tile. Returns an error if any required field
@@ -260,10 +238,6 @@ impl TileBuilder {
                 kind: self.kind.unwrap(),
                 opaque: self.opaque.unwrap(),
                 access: self.access,
-                // walk: self.walk.unwrap(),
-                // fly: self.fly.unwrap(),
-                // swim: self.swim.unwrap(),
-                // other_movement: self.custom_movetypes,
             })
         }
     }
@@ -310,23 +284,11 @@ pub struct Tile {
     /// The kind of tile it is.
     pub kind: String,
 
-    /// A vector that defines the movement types that can enter the Tile.
+    /// A hashset that defines the movement types that can enter the Tile.
     pub access: HashSet<MoveType>,
 
     /// Whether or not the tile blocks vision.
     pub opaque: bool,
-    // /// Whether or not a walking entity can access the tile.
-    // pub walk: bool,
-
-    // /// Whether or not a flying entity can access the tile.
-    // pub fly: bool,
-
-    // /// Whether or not a swimming entity can access the tile.
-    // pub swim: bool,
-
-    // /// Any other user-defined alternate forms of movement and their accessibility
-    // /// for that form of movement.
-    // pub other_movement: HashMap<String, bool>,
 }
 
 impl Default for Tile {
@@ -343,10 +305,6 @@ impl Tile {
             kind: "wall".to_string(),
             access: set![],
             opaque: true,
-            // walk: false,
-            // fly: false,
-            // swim: false,
-            // other_movement: HashMap::new(),
         }
     }
 
@@ -356,10 +314,6 @@ impl Tile {
             kind: "floor".to_string(),
             access: set![MoveType::Walk, MoveType::Fly],
             opaque: false,
-            // walk: true,
-            // fly: true,
-            // swim: false,
-            // other_movement: HashMap::new(),
         }
     }
 
@@ -369,10 +323,6 @@ impl Tile {
             kind: "water".to_string(),
             access: set![MoveType::Swim, MoveType::Fly],
             opaque: false,
-            // walk: false,
-            // fly: true,
-            // swim: true,
-            // other_movement: HashMap::new(),
         }
     }
 
@@ -382,10 +332,6 @@ impl Tile {
             kind: "lava".to_string(),
             access: set![MoveType::Fly],
             opaque: false,
-            // walk: false,
-            // fly: true,
-            // swim: false,
-            // other_movement: HashMap::new(),
         }
     }
 
@@ -395,10 +341,6 @@ impl Tile {
             kind: "chasm".to_string(),
             access: set![MoveType::Fly],
             opaque: false,
-            // walk: false,
-            // fly: true,
-            // swim: false,
-            // other_movement: HashMap::new(),
         }
     }
 
@@ -407,8 +349,6 @@ impl Tile {
     /// (i.e. lava walking, digging, etc.)
     pub fn add_movetype(&mut self, movtype: &str, value: bool) {
         let prop = movtype.to_lowercase();
-
-        // self.other_movement.entry(prop.clone()).or_insert(value);
 
         if value {
             self.access.insert(MoveType::Custom(prop));
@@ -439,24 +379,9 @@ impl Tile {
     /// }
     /// ```
     pub fn can_enter(&self, move_types: &[MoveType]) -> bool {
-        // TODO: This should return a user-facing error
         move_types
             .iter()
             .any(|move_type| self.access.contains(move_type))
-
-        // move_types
-        //     .iter()
-        //     .map(|move_type| match move_type {
-        //         MoveType::Walk => Ok(self.walk),
-        //         MoveType::Fly => Ok(self.fly),
-        //         MoveType::Swim => Ok(self.swim),
-        //         MoveType::Custom(custom) => self.other_movement.get(custom).copied().ok_or(
-        //             format!("Movement type {} does not exist for this tile", custom),
-        //         ),
-        //     }) // Vec<Result<bool, String>>
-        //     .collect::<Result<Vec<bool>, String>>()
-        //     .map(|resvec| resvec.iter().any(|res| *res))
-        // true
     }
 }
 
@@ -468,43 +393,23 @@ mod tests {
     fn is_wall(tile: Tile) {
         assert!(tile.opaque);
         assert!(tile.access == set![])
-        // assert!(!tile.walk);
-        // assert!(!tile.fly);
-        // assert!(!tile.swim);
-        // assert_eq!(tile.other_movement, HashMap::new());
     }
     fn is_floor(tile: Tile) {
         assert!(!tile.opaque);
         assert!(tile.access == set![MoveType::Walk, MoveType::Fly]);
-        // assert!(tile.walk);
-        // assert!(tile.fly);
-        // assert!(!tile.swim);
-        // assert_eq!(tile.other_movement, HashMap::new());
     }
     fn is_water(tile: Tile) {
         assert!(!tile.opaque);
         println!("{:?}", tile.access);
         assert!(tile.access == set![MoveType::Swim, MoveType::Fly]);
-        // assert!(!tile.walk);
-        // assert!(tile.fly);
-        // assert!(tile.swim);
-        // assert_eq!(tile.other_movement, HashMap::new());
     }
     fn is_lava(tile: Tile) {
         assert!(!tile.opaque);
         assert!(tile.access == set![MoveType::Fly]);
-        // assert!(!tile.walk);
-        // assert!(tile.fly);
-        // assert!(!tile.swim);
-        // assert_eq!(tile.other_movement, HashMap::new());
     }
     fn is_chasm(tile: Tile) {
         assert!(!tile.opaque);
         assert!(tile.access == set![MoveType::Fly]);
-        // assert!(!tile.walk);
-        // assert!(tile.fly);
-        // assert!(!tile.swim);
-        // assert_eq!(tile.other_movement, HashMap::new());
     }
 
     #[test]
