@@ -12,3 +12,4 @@ license = "MIT OR Apache-2.0"
 serde = {version = "*", features = ["derive"]}
 bracket-geometry = {version = "*", features = ["serde"]}
 bracket-pathfinding = "*"
+rayon = "*"

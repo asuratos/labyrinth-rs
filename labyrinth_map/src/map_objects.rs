@@ -3,6 +3,7 @@
 use std::collections::{HashMap, HashSet};
 
 use bracket_pathfinding::prelude::*;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[macro_use]
@@ -334,11 +335,11 @@ impl InternalLabyrinth2D {
     fn from_map(map: &Labyrinth2D, move_types: &[MoveType]) -> InternalLabyrinth2D {
         let enterable = map
             .tiles
-            .iter()
+            .par_iter()
             .map(|tile| tile.can_enter(move_types))
             .collect::<Vec<bool>>();
 
-        let opaque: Vec<bool> = map.tiles.iter().map(|tile| tile.opaque).collect();
+        let opaque: Vec<bool> = map.tiles.par_iter().map(|tile| tile.opaque).collect();
 
         InternalLabyrinth2D {
             opaque,
