@@ -8,7 +8,17 @@ license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+tools = ["bracket-lib"]
+
 [dependencies]
 serde = {version = "*", features = ["derive"]}
 bracket-geometry = {version = "*", features = ["serde"]}
 bracket-pathfinding = "*"
+bracket-lib = {version = "*", features = ["serde"], optional = true}
+
+[[bin]]
+name = "editor"
+path = "src/tools/editor.rs"
+required-features = ["tools"]

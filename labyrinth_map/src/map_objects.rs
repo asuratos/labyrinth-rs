@@ -99,26 +99,53 @@ impl Labyrinth2D {
         }
     }
 
-    /// Constructs a new Labyrinth with a size defined by a 2d [`Point`].
+    /// Constructus a new Labyrinth with the passed width and height values.
     ///
-    /// Initial Tiles are all walls.
-    pub fn new_from_dims(dimensions: Point) -> Labyrinth2D {
+    /// Initial Tiles are floors, with the boundary tiles being all walls.
+    pub fn new_walled(width: usize, height: usize) -> Labyrinth2D {
+        let mut tiles = vec![Tile::floor(); width * height];
+        tiles = tiles
+            .iter()
+            .enumerate()
+            .map(|(i, tile)| {
+                if (i < (width))
+                    || (i > ((width * height) - width))
+                    || (i % height == 0)
+                    || (i % height == width - 1)
+                {
+                    Tile::wall()
+                } else {
+                    tile.clone()
+                }
+            })
+            .collect();
+
         Labyrinth2D {
-            tiles: vec![Default::default(); (dimensions.x * dimensions.y) as usize],
-            dimensions,
+            tiles: tiles,
+            dimensions: Point::new(width, height),
             _filter: vec![MoveType::Walk],
         }
     }
 
     /// Constructs a new Labyrinth with a size defined by a 2d [`Point`].
     ///
+    /// Initial Tiles are all walls.
+    pub fn new_from_dims(dimensions: Point) -> Labyrinth2D {
+        Labyrinth2D::new(dimensions.x as usize, dimensions.y as usize)
+    }
+
+    /// Constructs a new Labyrinth with a size defined by a 2d [`Point`].
+    ///
     /// Initial Tiles are all floors.
     pub fn new_empty_from_dims(dimensions: Point) -> Labyrinth2D {
-        Labyrinth2D {
-            tiles: vec![Tile::floor(); (dimensions.x * dimensions.y) as usize],
-            dimensions,
-            _filter: vec![MoveType::Walk],
-        }
+        Labyrinth2D::new_empty(dimensions.x as usize, dimensions.y as usize)
+    }
+
+    /// Constructs a new Labyrinth with a size defined by a 2d [`Point`].
+    ///
+    /// Initial Tiles are floors, with the boundary tiles being all walls.
+    pub fn new_walled_from_dims(dimensions: Point) -> Labyrinth2D {
+        Labyrinth2D::new_walled(dimensions.x as usize, dimensions.y as usize)
     }
 
     // -------------------- Pathfinding functions -----------------
@@ -294,6 +321,11 @@ impl Labyrinth2D {
             self.tile_at_mut(loc).remove_movetype(move_type);
         }
     }
+
+    // ----------------- Map Accessor Methods --------------
+    pub fn tiles(&self) -> &Vec<Tile> {
+        &self.tiles
+    }
 }
 
 #[cfg(test)]
@@ -309,6 +341,7 @@ mod tests {
     fn out_of_bounds_neighbors_are_ignored() {
         let map = Labyrinth2D::new_empty(3, 3);
 
+        println!("{:?}", map.get_available_exits(4));
         assert_eq!(count_neighbors(&map, 4), 4); // Center
 
         assert_eq!(count_neighbors(&map, 0), 2); // Upper left corner
