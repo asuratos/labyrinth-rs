@@ -21,30 +21,39 @@ struct State {
 
 impl GameState for State {
     fn tick(&mut self, ctx: &mut BTerm) {
-        // draw everything
+        // clear
         ctx.cls();
+
+        // draw panel
+        // TODO: put this in a function
         ctx.draw_hollow_box_double(51, 1, 28, 48, RGBA::named(WHITE), RGBA::new());
 
         let tilename = match self.brush_state {
-            TileType::Floor => "floor",
             TileType::Wall => "wall",
-            TileType::Chasm => "chasm",
-            TileType::Lava => "lava",
+            TileType::Floor => "floor",
             TileType::Water => "water",
+            TileType::Lava => "lava",
+            TileType::Chasm => "chasm",
         };
 
         ctx.print(52, 2, format!("Click to set tile to {}", tilename));
+        ctx.print(52, 4, "Controls:");
+        ctx.print(52, 5, "1: Wall");
+        ctx.print(52, 6, "2: Floor");
+        ctx.print(52, 7, "3: Water");
+        ctx.print(52, 8, "4: Lava");
+        ctx.print(52, 9, "5: Chasm");
 
         draw_map(&self.map, ctx);
 
-        // wait for user input
+        // process user input
         let mut input = INPUT.lock();
 
         while let Some(ev) = input.pop() {
             match ev {
                 BEvent::MouseButtonDown { button: 0 } => self.painting = true,
                 BEvent::MouseButtonUp { button: 0 } => self.painting = false,
-                BEvent::CursorMoved { position: _ } if self.painting => paint_tile(self, ctx),
+                BEvent::CursorMoved { .. } if self.painting => paint_tile(self, ctx),
                 BEvent::Character { c } => process_character(self, c),
                 BEvent::CloseRequested => ctx.quit(),
                 _ => (),
@@ -54,6 +63,7 @@ impl GameState for State {
 }
 
 fn process_character(gs: &mut State, c: char) {
+    // TODO: import and export map files/strings
     if let Some(newtile) = match c {
         '1' => Some(TileType::Wall),
         '2' => Some(TileType::Floor),
@@ -95,7 +105,7 @@ fn draw_tile(pt: Point, kind: &str, ctx: &mut BTerm) {
         "floor" => ('.', RGBA::named(GRAY), RGBA::named(BLACK)),
         "water" => ('~', RGBA::named(LIGHT_BLUE), RGBA::named(BLUE)),
         "lava" => ('~', RGBA::named(ORANGE), RGBA::named(YELLOW)),
-        "chasm" => (' ', RGBA::named(BLACK), RGBA::named(BLACK)),
+        "chasm" => (' ', RGBA::named(BLACK), RGBA::named(DARK_BLUE)),
         _ => ('?', RGBA::named(RED), RGBA::named(RED)),
     };
 
