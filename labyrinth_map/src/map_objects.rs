@@ -4,6 +4,13 @@ use std::collections::HashSet;
 
 use bracket_pathfinding::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
+
+#[cfg(feature = "deserialize")]
+use ron::from_str;
+
+#[cfg(feature = "serialize")]
+use ron::ser::{to_string_pretty, PrettyConfig};
 
 #[macro_use]
 mod tiles;
@@ -27,6 +34,8 @@ pub struct Labyrinth2D {
     /// The vector of tiles in the map.
     tiles: Vec<Tile>,
     dimensions: Point,
+
+    #[serde(skip)]
     _filter: Vec<MoveType>,
 }
 
@@ -76,6 +85,31 @@ impl BaseMap for Labyrinth2D {
 }
 
 impl Labyrinth2D {
+    // ------------------ Serialization --------------------------
+    // TODO: proper error handling
+    #[cfg(feature = "serialize")]
+    pub fn dump_as(&self, fname: PathBuf) -> Result<(), String> {
+        use std::fs;
+        use std::io::Write;
+
+        let repr = to_string_pretty(&self, PrettyConfig::new())
+            .map_err(|_| "Unable to serialize".to_string())?;
+        let mut file = fs::File::create(fname.as_path()).map_err(|_| "Unable to create file")?;
+        file.write(repr.as_bytes())
+            .map_err(|_| "Unable to write to file")?;
+        Ok(())
+    }
+
+    #[cfg(feature = "deserialize")]
+    pub fn read_from(fname: PathBuf) -> Result<Labyrinth2D, String> {
+        use std::fs;
+
+        let raw_data = &fs::read_to_string(fname.as_path())
+            .map_err(|_| format!("Could not open file {:?}", fname.to_str().unwrap()))?;
+
+        from_str(raw_data).map_err(|_| "Unable to deserialize".to_string())
+    }
+
     // ------------------ Constructors ---------------------------
     /// Constructs a new Labyrinth with the passed width and height values.
     ///
@@ -323,14 +357,33 @@ impl Labyrinth2D {
     }
 
     // ----------------- Map Accessor Methods --------------
+    pub fn size(&self) -> usize {
+        self.tiles.len()
+    }
+
     pub fn tiles(&self) -> &Vec<Tile> {
         &self.tiles
+    }
+
+    pub fn iter(&self) -> core::slice::Iter<Tile> {
+        self.tiles.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<Tile> {
+        self.tiles.iter_mut()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Serialization
+    // #[test]
+    // fn serialize() {
+    //     let map = Labyrinth2D::new_empty(10, 10);
+    //     map.dump();
+    // }
 
     // Trait implementation tests
     fn count_neighbors(map: &Labyrinth2D, idx: usize) -> usize {

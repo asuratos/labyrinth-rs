@@ -10,9 +10,12 @@ license = "MIT OR Apache-2.0"
 
 [features]
 default = []
-tools = ["bracket-lib"]
+tools = ["bracket-lib", "serialize", "deserialize"]
+serialize = []
+deserialize = []
 
 [dependencies]
+ron = "*"
 serde = {version = "*", features = ["derive"]}
 bracket-geometry = {version = "*", features = ["serde"]}
 bracket-pathfinding = "*"

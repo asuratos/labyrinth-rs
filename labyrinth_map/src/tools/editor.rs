@@ -1,8 +1,4 @@
-#[cfg(feature = "tools")]
 use bracket_lib::prelude::*;
-
-use bracket_geometry::prelude::Point;
-use bracket_pathfinding::prelude::Algorithm2D;
 use labyrinth_map::prelude::*;
 
 enum TileType {
@@ -53,7 +49,7 @@ impl GameState for State {
             match ev {
                 BEvent::MouseButtonDown { button: 0 } => self.painting = true,
                 BEvent::MouseButtonUp { button: 0 } => self.painting = false,
-                BEvent::CursorMoved { .. } if self.painting => paint_tile(self, ctx),
+                BEvent::CursorMoved { .. } => try_paint_tile(self, ctx),
                 BEvent::Character { c } => process_character(self, c),
                 BEvent::CloseRequested => ctx.quit(),
                 _ => (),
@@ -70,13 +66,52 @@ fn process_character(gs: &mut State, c: char) {
         '3' => Some(TileType::Water),
         '4' => Some(TileType::Lava),
         '5' => Some(TileType::Chasm),
+        'e' => {
+            export(gs);
+            None
+        }
+        'i' => {
+            import(gs);
+            None
+        }
         _ => None,
     } {
         gs.brush_state = newtile;
     }
 }
 
-fn paint_tile(gs: &mut State, ctx: &mut BTerm) {
+fn export(gs: &State) {
+    // TODO: figure out exactly where to put this
+    let mut current_path = std::env::current_exe().unwrap();
+    current_path.pop();
+    current_path.push("map.ron");
+
+    match gs.map.dump_as(current_path) {
+        Err(e) => {
+            println!("{}", e)
+        }
+        _ => {}
+    };
+}
+
+fn import(gs: &mut State) {
+    let mut current_path = std::env::current_exe().unwrap();
+    current_path.pop();
+    current_path.push("map.ron");
+
+    match Labyrinth2D::read_from(current_path) {
+        Ok(map) => gs.map = map,
+        Err(e) => {
+            println!("{}", e)
+        }
+    };
+}
+
+fn try_paint_tile(gs: &mut State, ctx: &mut BTerm) {
+    if !gs.painting {
+        return;
+    }
+
     let loc = ctx.mouse_point();
 
     match gs.brush_state {
@@ -85,13 +120,11 @@ fn paint_tile(gs: &mut State, ctx: &mut BTerm) {
         TileType::Water => gs.map.set_water(loc),
         TileType::Lava => gs.map.set_lava(loc),
         TileType::Chasm => gs.map.set_chasm(loc),
-        _ => (),
     }
 }
 
 fn draw_map(map: &Labyrinth2D, ctx: &mut BTerm) {
-    // TODO: map iterator
-    (0..map.tiles().len()).for_each(|idx| {
+    (0..map.size()).for_each(|idx| {
         let pt = map.index_to_point2d(idx);
         draw_tile(pt, map.tile_kind(pt), ctx);
     });
@@ -120,7 +153,7 @@ fn main() -> BError {
 
     let gs: State = State {
         map: Labyrinth2D::new_walled(50, 50),
-        brush_state: TileType::Water,
+        brush_state: TileType::Wall,
         painting: false,
     };
 
