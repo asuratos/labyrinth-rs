@@ -21,6 +21,13 @@ bracket-geometry = {version = "*", features = ["serde"]}
 bracket-pathfinding = "*"
 bracket-lib = {version = "*", features = ["serde"], optional = true}
 
+[dev-dependencies]
+bracket-lib = {version = "*", features = ["serde"]}
+
+[[example]]
+name = "pathfinding"
+required-features = ["serialize", "deserialize"]
+
 [[bin]]
 name = "editor"
 path = "src/tools/editor.rs"
