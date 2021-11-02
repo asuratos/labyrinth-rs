@@ -47,10 +47,9 @@ impl GameState for State {
 fn process_character(gs: &mut State, c: char) {
     // TODO: import and export map files/strings
     match c {
-        _ => {},
+        _ => {}
     }
 }
-
 
 fn import(gs: &mut State) {
     // let mut current_path = std::env::current_exe().unwrap();
