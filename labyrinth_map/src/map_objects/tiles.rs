@@ -64,7 +64,7 @@ impl MoveType {
 /// - Chasm through [`Tile::chasm()`]
 ///     - Doesn't block vision
 ///     - Passable for flyers
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
     /// The kind of tile it is.
     pub kind: String,
@@ -89,8 +89,8 @@ impl Tile {
     pub fn new(kind: &str, opaque: bool, access: HashSet<MoveType>) -> Tile {
         Tile {
             kind: kind.to_lowercase(),
-            access: access,
-            opaque: opaque,
+            access,
+            opaque,
         }
     }
 
@@ -124,12 +124,8 @@ impl Tile {
     /// (i.e. lava walking, digging, etc.)
     pub fn add_movetype(&mut self, movtype: &MoveType) -> bool {
         match movtype {
-            MoveType::Custom(str) => {
-                return self.access.insert(MoveType::custom(&str));
-            }
-            _ => {
-                return self.access.insert(movtype.clone());
-            }
+            MoveType::Custom(str) => self.access.insert(MoveType::custom(str)),
+            _ => self.access.insert(movtype.clone()),
         }
     }
 
@@ -138,12 +134,8 @@ impl Tile {
     /// (i.e. lava walking, digging, etc.)
     pub fn remove_movetype(&mut self, movtype: &MoveType) -> bool {
         match movtype {
-            MoveType::Custom(str) => {
-                return self.access.remove(&MoveType::custom(str));
-            }
-            _ => {
-                return self.access.remove(movtype);
-            }
+            MoveType::Custom(str) => self.access.remove(&MoveType::custom(str)),
+            _ => self.access.remove(movtype),
         }
     }
 

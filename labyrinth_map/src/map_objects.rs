@@ -11,7 +11,7 @@ use ron::from_str;
 #[cfg(feature = "serialize")]
 use ron::ser::{to_string_pretty, PrettyConfig};
 
-mod labyrinth_serde_traits;
+mod labyrinth_serialization;
 
 #[macro_use]
 mod tiles;
@@ -30,7 +30,7 @@ use tiles::*;
 ///
 /// let map = Labyrinth2D::new(10,10);
 /// ```
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct Labyrinth2D {
     /// The vector of tiles in the map.
     tiles: Vec<Tile>,
@@ -89,31 +89,6 @@ impl Labyrinth2D {
     // ------------------ Serialization --------------------------
     // TODO: proper error handling
     // TODO: properly learn Serialization
-
-    /// constructs a mapstring representation of the internal tiles
-    fn mapstring(&self) -> String {
-        let mut mapstr = String::from("\n");
-
-        for row in self.iter_rows() {
-            // TODO: check if row is complete here
-            for tile in row {
-                // get the representation of the tile
-                let kind: &str = &tile.kind;
-                mapstr.push_str(match kind {
-                    "wall" => "#",
-                    "floor" => ".",
-                    "water" => "~",
-                    "lava" => "x",
-                    "chasm" => "_",
-                    _ => "?",
-                });
-            };
-
-            mapstr.push_str("\n");
-        }
-        mapstr
-    }
-
     #[cfg(feature = "serialize")]
     pub fn dump_as(&self, fname: &str) -> Result<(), String> {
         use std::fs;
@@ -187,7 +162,7 @@ impl Labyrinth2D {
             .collect();
 
         Labyrinth2D {
-            tiles: tiles,
+            tiles,
             dimensions: Point::new(width, height),
             _filter: vec![MoveType::Walk],
         }
