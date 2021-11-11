@@ -4,7 +4,6 @@ use std::collections::HashSet;
 
 use bracket_pathfinding::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 
 #[cfg(feature = "deserialize")]
 use ron::from_str;
@@ -87,27 +86,33 @@ impl BaseMap for Labyrinth2D {
 impl Labyrinth2D {
     // ------------------ Serialization --------------------------
     // TODO: proper error handling
+    // TODO: properly learn Serialization
     #[cfg(feature = "serialize")]
-    pub fn dump_as(&self, fname: PathBuf) -> Result<(), String> {
+    pub fn dump_as(&self, fname: &str) -> Result<(), String> {
         use std::fs;
         use std::io::Write;
 
         let repr = to_string_pretty(&self, PrettyConfig::new())
             .map_err(|_| "Unable to serialize".to_string())?;
-        let mut file = fs::File::create(fname.as_path()).map_err(|_| "Unable to create file")?;
+        let mut file = fs::File::create(fname).map_err(|_| "Unable to create file")?;
         file.write(repr.as_bytes())
             .map_err(|_| "Unable to write to file")?;
         Ok(())
     }
 
     #[cfg(feature = "deserialize")]
-    pub fn read_from(fname: PathBuf) -> Result<Labyrinth2D, String> {
+    pub fn read_from(fname: &str) -> Result<Labyrinth2D, String> {
         use std::fs;
 
-        let raw_data = &fs::read_to_string(fname.as_path())
-            .map_err(|_| format!("Could not open file {:?}", fname.to_str().unwrap()))?;
+        let raw_data =
+            &fs::read_to_string(fname).map_err(|_| format!("Could not open file {:?}", fname))?;
 
         from_str(raw_data).map_err(|_| "Unable to deserialize".to_string())
+    }
+
+    #[cfg(feature = "deserialize")]
+    pub fn read_from_ronstr(raw: &str) -> Result<Labyrinth2D, String> {
+        from_str(raw).map_err(|_| "Unable to deserialize".to_string())
     }
 
     // ------------------ Constructors ---------------------------

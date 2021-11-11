@@ -1,6 +1,8 @@
 use bracket_lib::prelude::*;
 use labyrinth_map::prelude::*;
 
+static MAP: &str = include_str!("pathfinding_map.ron");
+
 enum TileType {
     Wall,
     Floor,
@@ -11,6 +13,7 @@ enum TileType {
 
 struct State {
     map: Labyrinth2D,
+    movetypes: Vec<MoveType>,
 }
 
 impl GameState for State {
@@ -22,12 +25,10 @@ impl GameState for State {
         // TODO: put this in a function
         ctx.draw_hollow_box_double(51, 1, 28, 48, RGBA::named(WHITE), RGBA::new());
 
-        ctx.print(52, 4, "Controls:");
-        ctx.print(52, 5, "1: Wall");
-        ctx.print(52, 6, "2: Floor");
-        ctx.print(52, 7, "3: Water");
-        ctx.print(52, 8, "4: Lava");
-        ctx.print(52, 9, "5: Chasm");
+        ctx.print(52, 4, "Move Types:");
+        ctx.print(52, 5, "1: Walk");
+        ctx.print(52, 6, "2: Fly");
+        ctx.print(52, 7, "3: Swim");
 
         draw_map(&self.map, ctx);
 
@@ -49,21 +50,6 @@ fn process_character(gs: &mut State, c: char) {
     match c {
         _ => {}
     }
-}
-
-fn import(gs: &mut State) {
-    // let mut current_path = std::env::current_exe().unwrap();
-    // current_path.pop();
-    // current_path.push("map.ron");
-
-    let mut path = std::path::PathBuf::new();
-    path.push("pathfinding_map.ron");
-    match Labyrinth2D::read_from(path) {
-        Ok(map) => gs.map = map,
-        Err(e) => {
-            println!("{}", e)
-        }
-    };
 }
 
 fn draw_map(map: &Labyrinth2D, ctx: &mut BTerm) {
@@ -94,11 +80,9 @@ fn main() -> BError {
         .with_advanced_input(true)
         .build()?;
 
-    let mut path = std::path::PathBuf::new();
-    path.push("pathfinding_map.ron");
-
     let gs: State = State {
-        map: Labyrinth2D::read_from(path).unwrap(),
+        map: Labyrinth2D::read_from_ronstr(MAP).unwrap(),
+        movetypes: vec![],
     };
 
     main_loop(context, gs)

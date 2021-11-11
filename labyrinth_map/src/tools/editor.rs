@@ -81,12 +81,7 @@ fn process_character(gs: &mut State, c: char) {
 }
 
 fn export(gs: &State) {
-    // TODO: figure out exactly where to put this
-    let mut current_path = std::env::current_exe().unwrap();
-    current_path.pop();
-    current_path.push("map.ron");
-
-    match gs.map.dump_as(current_path) {
+    match gs.map.dump_as("map.ron") {
         Err(e) => {
             println!("{}", e)
         }
@@ -95,11 +90,7 @@ fn export(gs: &State) {
 }
 
 fn import(gs: &mut State) {
-    let mut current_path = std::env::current_exe().unwrap();
-    current_path.pop();
-    current_path.push("map.ron");
-
-    match Labyrinth2D::read_from(current_path) {
+    match Labyrinth2D::read_from("map.ron") {
         Ok(map) => gs.map = map,
         Err(e) => {
             println!("{}", e)
