@@ -30,13 +30,13 @@ use tiles::*;
 ///
 /// let map = Labyrinth2D::new(10,10);
 /// ```
-#[derive(Deserialize, Clone)]
+#[derive(Clone)]
 pub struct Labyrinth2D {
     /// The vector of tiles in the map.
     tiles: Vec<Tile>,
     dimensions: Point,
 
-    #[serde(skip)]
+    // #[serde(skip)]
     _filter: Vec<MoveType>,
 }
 
@@ -103,13 +103,14 @@ impl Labyrinth2D {
     }
 
     #[cfg(feature = "deserialize")]
-    pub fn read_from(fname: &str) -> Result<Labyrinth2D, String> {
+    pub fn read_from(fname: &str) -> Result<Labyrinth2D, ron::Error> {
         use std::fs;
 
-        let raw_data =
-            &fs::read_to_string(fname).map_err(|_| format!("Could not open file {:?}", fname))?;
+        let raw_data = &fs::read_to_string(fname)
+            .map_err(|_| format!("Could not open file {:?}", fname))
+            .unwrap();
 
-        from_str(raw_data).map_err(|_| "Unable to deserialize".to_string())
+        from_str(raw_data) //.map_err(|_| "Unable to deserialize".to_string())
     }
 
     #[cfg(feature = "deserialize")]

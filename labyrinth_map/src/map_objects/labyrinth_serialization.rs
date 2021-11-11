@@ -1,10 +1,13 @@
 use super::{Labyrinth2D, Tile};
 
+use std::fmt;
+
 use std::collections::HashMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-use serde::ser::{Serialize, SerializeStruct};
+use serde::de::{Deserializer, Error, MapAccess, Visitor};
+use serde::ser::SerializeStruct;
 
 impl Labyrinth2D {
     /// constructs a mapstring representation of the internal tiles
@@ -89,5 +92,60 @@ impl Serialize for Labyrinth2D {
         state.serialize_field("tiledict", &dict)?;
 
         state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Labyrinth2D {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "lowercase")]
+        enum Field {
+            Mapstring,
+            Tiledict,
+        }
+
+        struct Labyrinth2DVisitor;
+
+        impl<'de> Visitor<'de> for Labyrinth2DVisitor {
+            type Value = Labyrinth2D;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Labyrinth2D")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Labyrinth2D, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut mapstr = None;
+                let mut tiledict = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Mapstring => {
+                            if mapstr.is_some() {
+                                return Err(Error::duplicate_field("mapstring"));
+                            }
+                            mapstr = Some(map.next_value()?);
+                        }
+                        Field::Tiledict => {
+                            if tiledict.is_some() {
+                                return Err(Error::duplicate_field("tiledict"));
+                            }
+                            tiledict = Some(map.next_value()?);
+                        }
+                    }
+                }
+                let mapstr = mapstr.ok_or_else(|| Error::missing_field("mapstring"))?;
+                let tiledict = tiledict.ok_or_else(|| Error::missing_field("tiledict"))?;
+                Ok(Labyrinth2D::new(5, 5))
+            }
+        }
+
+        const FIELDS: &'static [&'static str] = &["mapstring", "tiledict"];
+        deserializer.deserialize_struct("Labyrinth2D", FIELDS, Labyrinth2DVisitor)
     }
 }
