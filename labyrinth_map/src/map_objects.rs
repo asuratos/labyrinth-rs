@@ -11,6 +11,8 @@ use ron::from_str;
 #[cfg(feature = "serialize")]
 use ron::ser::{to_string_pretty, PrettyConfig};
 
+mod labyrinth_serde_traits;
+
 #[macro_use]
 mod tiles;
 pub use tiles::MoveType;
@@ -87,6 +89,31 @@ impl Labyrinth2D {
     // ------------------ Serialization --------------------------
     // TODO: proper error handling
     // TODO: properly learn Serialization
+
+    /// constructs a mapstring representation of the internal tiles
+    fn mapstring(&self) -> String {
+        let mut mapstr = String::from("\n");
+
+        for row in self.iter_rows() {
+            // TODO: check if row is complete here
+            for tile in row {
+                // get the representation of the tile
+                let kind: &str = &tile.kind;
+                mapstr.push_str(match kind {
+                    "wall" => "#",
+                    "floor" => ".",
+                    "water" => "~",
+                    "lava" => "x",
+                    "chasm" => "_",
+                    _ => "?",
+                });
+            };
+
+            mapstr.push_str("\n");
+        }
+        mapstr
+    }
+
     #[cfg(feature = "serialize")]
     pub fn dump_as(&self, fname: &str) -> Result<(), String> {
         use std::fs;
@@ -362,6 +389,7 @@ impl Labyrinth2D {
     }
 
     // ----------------- Map Accessor Methods --------------
+    // TODO: test these probably
     pub fn size(&self) -> usize {
         self.tiles.len()
     }
@@ -376,6 +404,15 @@ impl Labyrinth2D {
 
     pub fn iter_mut(&mut self) -> core::slice::IterMut<Tile> {
         self.tiles.iter_mut()
+    }
+
+    pub fn iter_rows(&self) -> std::slice::Chunks<Tile> {
+        self.tiles.chunks(self.dimensions().x as usize)
+    }
+
+    pub fn iter_rows_mut(&mut self) -> std::slice::ChunksMut<Tile> {
+        let width = self.dimensions().x as usize;
+        self.tiles.chunks_mut(width)
     }
 }
 
