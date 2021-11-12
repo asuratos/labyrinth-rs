@@ -3,7 +3,6 @@ use super::{Labyrinth2D, Point, Tile};
 use std::fmt;
 
 use std::collections::HashMap;
-use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
 

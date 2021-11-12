@@ -114,6 +114,7 @@ impl Labyrinth2D {
         from_str(raw_data).map_err(|msg| format!("Deserialize failed!: {}", msg))
     }
 
+    // TODO: figure out the serialization interface? Do I even need one?
     #[cfg(feature = "deserialize")]
     pub fn read_from_ronstr(raw: &str) -> Result<Labyrinth2D, String> {
         from_str(raw).map_err(|msg| format!("Deserialize failed!: {}", msg))
