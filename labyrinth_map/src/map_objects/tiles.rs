@@ -64,7 +64,7 @@ impl MoveType {
 /// - Chasm through [`Tile::chasm()`]
 ///     - Doesn't block vision
 ///     - Passable for flyers
-#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
     /// The kind of tile it is.
     pub kind: String,

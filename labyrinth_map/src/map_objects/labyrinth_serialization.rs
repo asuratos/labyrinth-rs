@@ -1,8 +1,9 @@
-use super::{Labyrinth2D, Tile};
+use super::{Labyrinth2D, Point, Tile};
 
 use std::fmt;
 
 use std::collections::HashMap;
+use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +11,7 @@ use serde::de::{Deserializer, Error, MapAccess, Visitor};
 use serde::ser::SerializeStruct;
 
 impl Labyrinth2D {
-    /// constructs a mapstring representation of the internal tiles
+    /// Constructs a mapstring and tiledict representation of the internal tiles
     fn compress(&self) -> (Vec<String>, HashMap<char, Tile>) {
         let mut mapstr = vec![];
         let mut tiledict = HashMap::new();
@@ -77,6 +78,45 @@ impl Labyrinth2D {
 
         (mapstr, finaltiledict)
     }
+
+    /// Constructs a Labyrinth2D from a mapstring and tiledict representation
+    fn unpack(
+        mapstring: Vec<String>,
+        tiledict: HashMap<char, Tile>,
+    ) -> Result<Labyrinth2D, String> {
+        // check if mapstring was valid
+        // All rows must have same length
+        if mapstring.iter().map(|str| str.len()).min()
+            != mapstring.iter().map(|str| str.len()).max()
+        {
+            return Err(String::from("Row lengths do not match!"));
+        }
+
+        // then construct the Vec<Tiles> from the joined mapstr and the dict
+        let width = mapstring[1].len() as i32;
+        let height = mapstring.len() as i32;
+        let dimensions = Point {
+            x: width,
+            y: height,
+        };
+
+        let joinedstr = mapstring.join("");
+
+        let tiles = joinedstr
+            .chars()
+            .map(|c| tiledict.get(&c).cloned())
+            .collect::<Option<Vec<Tile>>>();
+
+        if tiles.is_none() {
+            return Err(String::from("Tiledict incomplete, could not construct map"));
+        }
+
+        Ok(Labyrinth2D {
+            tiles: tiles.unwrap(),
+            dimensions,
+            _filter: vec![],
+        })
+    }
 }
 
 impl Serialize for Labyrinth2D {
@@ -120,8 +160,8 @@ impl<'de> Deserialize<'de> for Labyrinth2D {
             where
                 V: MapAccess<'de>,
             {
-                let mut mapstr = None;
-                let mut tiledict = None;
+                let mut mapstr: Option<Vec<String>> = None;
+                let mut tiledict: Option<HashMap<char, Tile>> = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -141,7 +181,9 @@ impl<'de> Deserialize<'de> for Labyrinth2D {
                 }
                 let mapstr = mapstr.ok_or_else(|| Error::missing_field("mapstring"))?;
                 let tiledict = tiledict.ok_or_else(|| Error::missing_field("tiledict"))?;
-                Ok(Labyrinth2D::new(5, 5))
+
+                Ok(Labyrinth2D::unpack(mapstr, tiledict)
+                    .map_err(|msg| Error::custom(format!("Unpack: {}", msg)))?)
             }
         }
 

@@ -103,19 +103,20 @@ impl Labyrinth2D {
     }
 
     #[cfg(feature = "deserialize")]
-    pub fn read_from(fname: &str) -> Result<Labyrinth2D, ron::Error> {
+    pub fn read_from(fname: &str) -> Result<Labyrinth2D, String> {
         use std::fs;
 
         let raw_data = &fs::read_to_string(fname)
             .map_err(|_| format!("Could not open file {:?}", fname))
             .unwrap();
 
-        from_str(raw_data) //.map_err(|_| "Unable to deserialize".to_string())
+        // from_str(raw_data).map_err(|_| "Unable to deserialize".to_string())
+        from_str(raw_data).map_err(|msg| format!("Deserialize failed!: {}", msg))
     }
 
     #[cfg(feature = "deserialize")]
     pub fn read_from_ronstr(raw: &str) -> Result<Labyrinth2D, String> {
-        from_str(raw).map_err(|_| "Unable to deserialize".to_string())
+        from_str(raw).map_err(|msg| format!("Deserialize failed!: {}", msg))
     }
 
     // ------------------ Constructors ---------------------------
