@@ -3,7 +3,7 @@
 //!
 
 #[cfg(feature = "serialization")]
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use std::collections::HashSet;
 
