@@ -2,7 +2,9 @@
 //!
 //!
 
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "serialization")]
+use serde::{Serialize, Deserialize};
+
 use std::collections::HashSet;
 
 macro_rules! set {
@@ -18,7 +20,8 @@ macro_rules! set {
 }
 
 /// Enum defining possible movement methods
-#[derive(PartialEq, Eq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Ord, PartialOrd, Hash, Debug, Clone)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum MoveType {
     /// variant for walking
     Walk,
@@ -64,7 +67,8 @@ impl MoveType {
 /// - Chasm through [`Tile::chasm()`]
 ///     - Doesn't block vision
 ///     - Passable for flyers
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct Tile {
     /// The kind of tile it is.
     pub kind: String,

@@ -81,7 +81,7 @@ fn process_character(gs: &mut State, c: char) {
 }
 
 fn export(gs: &State) {
-    match gs.map.dump_as("map.ron") {
+    match gs.map.dump_ron("map.ron") {
         Err(e) => {
             println!("{}", e)
         }
@@ -90,7 +90,7 @@ fn export(gs: &State) {
 }
 
 fn import(gs: &mut State) {
-    match Labyrinth2D::read_from("map.ron") {
+    match Labyrinth2D::read_ron("map.ron") {
         Ok(map) => gs.map = map,
         Err(e) => {
             println!("{}", e)

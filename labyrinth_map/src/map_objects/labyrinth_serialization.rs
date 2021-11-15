@@ -1,15 +1,48 @@
+//! Module for serialization-related code
+
 use super::{Labyrinth2D, Point, Tile};
 
+use std::collections::HashMap;
 use std::fmt;
 
-use std::collections::HashMap;
+use serde::de::{Deserialize, Deserializer, Error, MapAccess, Visitor};
+use serde::ser::{Serialize, SerializeStruct};
 
-use serde::{Deserialize, Serialize};
+use ron::from_str;
+use ron::ser::{to_string_pretty, PrettyConfig};
 
-use serde::de::{Deserializer, Error, MapAccess, Visitor};
-use serde::ser::SerializeStruct;
-
+// /// Implemenation of serialization-related methods for Labyrinth2D
 impl Labyrinth2D {
+    // ------------------ Serialization API --------------------------
+    // Don't know if this is even necessary
+    // TODO: proper error handling
+    pub fn dump_ron(&self, fname: &str) -> Result<(), String> {
+        use std::fs;
+        use std::io::Write;
+
+        let repr = to_string_pretty(&self, PrettyConfig::new())
+            .map_err(|_| "Unable to serialize".to_string())?;
+        let mut file = fs::File::create(fname).map_err(|_| "Unable to create file")?;
+        file.write(repr.as_bytes())
+            .map_err(|_| "Unable to write to file")?;
+        Ok(())
+    }
+
+    pub fn read_ron(fname: &str) -> Result<Labyrinth2D, String> {
+        use std::fs;
+
+        let raw_data = &fs::read_to_string(fname)
+            .map_err(|_| format!("Could not open file {:?}", fname))
+            .unwrap();
+
+        from_str(raw_data).map_err(|msg| format!("Deserialize failed!: {}", msg))
+    }
+
+    // TODO: figure out the serialization interface? Do I even need one?
+    pub fn read_ron_from_str(raw: &str) -> Result<Labyrinth2D, String> {
+        from_str(raw).map_err(|msg| format!("Deserialize failed!: {}", msg))
+    }
+
     /// Constructs a mapstring and tiledict representation of the internal tiles
     fn compress(&self) -> (Vec<String>, HashMap<char, Tile>) {
         let mut mapstr = vec![];
@@ -139,7 +172,7 @@ impl<'de> Deserialize<'de> for Labyrinth2D {
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
+        #[derive(serde::Deserialize)]
         #[serde(field_identifier, rename_all = "lowercase")]
         enum Field {
             Mapstring,

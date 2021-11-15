@@ -10,25 +10,21 @@ license = "MIT OR Apache-2.0"
 
 [features]
 default = []
-tools = ["bracket-lib", "serialize", "deserialize"]
-serialize = []
-deserialize = []
+tools = ["bracket-lib", "serialization"]
+serialization = ["serde", "ron"]
 
 [dependencies]
-ron = "*"
-serde = {version = "*", features = ["derive"]}
+ron = {version = "*", optional = true}
+serde = {version = "*", features = ["derive"], optional = true}
+bracket-lib = {version = "*", features = ["serde"], optional = true}
 bracket-geometry = {version = "*", features = ["serde"]}
 bracket-pathfinding = "*"
-bracket-lib = {version = "*", features = ["serde"], optional = true}
-
-[dev-dependencies]
-bracket-lib = {version = "*", features = ["serde"]}
 
 [[example]]
 name = "pathfinding"
-required-features = ["serialize", "deserialize"]
+required-features = ["serialization"]
 
 [[bin]]
 name = "editor"
 path = "src/tools/editor.rs"
-required-features = ["tools"]
+required-features = ["serialization"]

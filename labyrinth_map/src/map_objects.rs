@@ -3,14 +3,8 @@
 use std::collections::HashSet;
 
 use bracket_pathfinding::prelude::*;
-use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "deserialize")]
-use ron::from_str;
-
-#[cfg(feature = "serialize")]
-use ron::ser::{to_string_pretty, PrettyConfig};
-
+#[cfg(feature = "serialization")]
 mod labyrinth_serialization;
 
 #[macro_use]
@@ -32,11 +26,11 @@ use tiles::*;
 /// ```
 #[derive(Clone)]
 pub struct Labyrinth2D {
-    /// The vector of tiles in the map.
+    // The vector of tiles in the map.
     tiles: Vec<Tile>,
     dimensions: Point,
 
-    // #[serde(skip)]
+    // Internal state vector for pathfinding filters
     _filter: Vec<MoveType>,
 }
 
@@ -86,40 +80,6 @@ impl BaseMap for Labyrinth2D {
 }
 
 impl Labyrinth2D {
-    // ------------------ Serialization --------------------------
-    // TODO: proper error handling
-    // TODO: properly learn Serialization
-    #[cfg(feature = "serialize")]
-    pub fn dump_as(&self, fname: &str) -> Result<(), String> {
-        use std::fs;
-        use std::io::Write;
-
-        let repr = to_string_pretty(&self, PrettyConfig::new())
-            .map_err(|_| "Unable to serialize".to_string())?;
-        let mut file = fs::File::create(fname).map_err(|_| "Unable to create file")?;
-        file.write(repr.as_bytes())
-            .map_err(|_| "Unable to write to file")?;
-        Ok(())
-    }
-
-    #[cfg(feature = "deserialize")]
-    pub fn read_from(fname: &str) -> Result<Labyrinth2D, String> {
-        use std::fs;
-
-        let raw_data = &fs::read_to_string(fname)
-            .map_err(|_| format!("Could not open file {:?}", fname))
-            .unwrap();
-
-        // from_str(raw_data).map_err(|_| "Unable to deserialize".to_string())
-        from_str(raw_data).map_err(|msg| format!("Deserialize failed!: {}", msg))
-    }
-
-    // TODO: figure out the serialization interface? Do I even need one?
-    #[cfg(feature = "deserialize")]
-    pub fn read_from_ronstr(raw: &str) -> Result<Labyrinth2D, String> {
-        from_str(raw).map_err(|msg| format!("Deserialize failed!: {}", msg))
-    }
-
     // ------------------ Constructors ---------------------------
     /// Constructs a new Labyrinth with the passed width and height values.
     ///

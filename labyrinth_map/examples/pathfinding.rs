@@ -80,8 +80,11 @@ fn main() -> BError {
         .with_advanced_input(true)
         .build()?;
 
+    let map = Labyrinth2D::read_ron_from_str(MAP)
+        .map_err(|msg| format!("Deserialize failed!: {}", msg))?;
+
     let gs: State = State {
-        map: Labyrinth2D::read_from_ronstr(MAP).unwrap(),
+        map,
         movetypes: vec![],
     };
 
