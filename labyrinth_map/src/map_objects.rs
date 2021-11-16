@@ -162,7 +162,10 @@ impl Labyrinth2D {
     // -------------------- Pathfinding functions -----------------
     /// Checks if the tile at a given [`Point`] can be entered for an entity
     /// with the specified movement types.
-    pub fn can_enter(&self, loc: Point, move_types: &[MoveType]) -> bool {
+    pub fn can_enter<'a, T>(&self, loc: Point, move_types: T) -> bool
+    where
+        T: IntoIterator<Item = &'a MoveType>,
+    {
         self.tile_at(loc).can_enter(move_types)
     }
 
@@ -183,20 +186,20 @@ impl Labyrinth2D {
     /// Find the path between two [`Points`](Point) for an entity with multiple
     /// movement types.
     // TODO: Examples here
-    pub fn find_path(
-        &mut self,
-        start: Point,
-        end: Point,
-        move_types: &[MoveType],
-    ) -> NavigationPath {
+    pub fn find_path<T>(&mut self, start: Point, end: Point, move_types: T) -> NavigationPath
+    where
+        T: Into<Vec<MoveType>>,
+    {
+        let move_types_vec = move_types.into();
+
         // If the movetype is only walk, then pathfinding can be done on
         // the Map as-is
-        if move_types == [MoveType::Walk] || move_types == [] {
+        if move_types_vec == vec![MoveType::Walk] || move_types_vec == vec![] {
             self._filter = vec![MoveType::Walk];
             // return self.find_path_walk(start, end);
         } else {
-            // if it's not walk, then
-            self._filter = move_types.to_vec();
+            // if it's not walk, then sort and assign as filter to the map
+            self._filter = move_types_vec;
             self._filter.sort();
         }
 
@@ -300,7 +303,10 @@ impl Labyrinth2D {
     }
 
     /// Sets the kind of the tile at a given [`Point`]
-    pub fn set_tile_kind<T: Into<String>>(&mut self, loc: Point, kind: T) {
+    pub fn set_tile_kind<T>(&mut self, loc: Point, kind: T)
+    where
+        T: Into<String>,
+    {
         self.tile_at_mut(loc).set_kind(kind);
     }
 
@@ -309,42 +315,24 @@ impl Labyrinth2D {
         self.tile_at_mut(loc).set_opacity(opaque);
     }
 
-    // /// Sets the tile at the given [`Point`](Point) to a basic floor.
-    // pub fn set_floor(&mut self, loc: Point) {
-    //     self.set_tile_at(loc, Tile::floor());
-    // }
-
-    // /// Sets the tile at the given [`Point`](Point) to a basic wall.
-    // pub fn set_wall(&mut self, loc: Point) {
-    //     self.set_tile_at(loc, Tile::wall());
-    // }
-
-    // /// Sets the tile at the given [`Point`](Point) to a basic water tile.
-    // pub fn set_water(&mut self, loc: Point) {
-    //     self.set_tile_at(loc, Tile::water());
-    // }
-
-    // /// Sets the tile at the given [`Point`](Point) to a basic lava tile.
-    // pub fn set_lava(&mut self, loc: Point) {
-    //     self.set_tile_at(loc, Tile::lava());
-    // }
-
-    // /// Sets the tile at the given [`Point`](Point) to a basic chasm tile.
-    // pub fn set_chasm(&mut self, loc: Point) {
-    //     self.set_tile_at(loc, Tile::chasm());
-    // }
-
     /// Adds a set of movetypes to a tile at the given [`Point`](Point).
-    pub fn add_movetypes(&mut self, loc: Point, move_types: &[MoveType]) {
-        for move_type in move_types {
-            self.tile_at_mut(loc).add_movetype(move_type);
-        }
+    pub fn add_movetypes<T>(&mut self, loc: Point, move_types: T)
+    where
+        T: IntoIterator<Item = MoveType>,
+    {
+        self.tile_at_mut(loc).add_movetypes(move_types);
+        // for move_type in move_types {
+        //     self.tile_at_mut(loc).add_movetype(move_type);
+        // }
     }
 
     /// Removes a set of movetypes to a tile at the given [`Point`](Point).
-    pub fn remove_movetypes(&mut self, loc: Point, move_types: &[MoveType]) {
+    pub fn remove_movetypes<T>(&mut self, loc: Point, move_types: T)
+    where
+        T: IntoIterator<Item = MoveType>,
+    {
         for move_type in move_types {
-            self.tile_at_mut(loc).remove_movetype(move_type);
+            self.tile_at_mut(loc).remove_movetype(&move_type);
         }
     }
 
@@ -368,44 +356,34 @@ impl Labyrinth2D {
 
     // TODO: Rows struct as chunks
     pub fn rows(&self) -> Rows<Tile> {
-        Rows {
-            wrapped: self.tiles.chunks(self.dimensions().x as usize),
-        }
+        Rows(self.tiles.chunks(self.dimensions().x as usize))
     }
 
     pub fn rows_mut(&mut self) -> RowsMut<Tile> {
         let width = self.dimensions().x as usize;
-        RowsMut {
-            wrapped: self.tiles.chunks_mut(width),
-        }
+        RowsMut(self.tiles.chunks_mut(width))
     }
 }
 
-pub struct Rows<'a, T> {
-    wrapped: std::slice::Chunks<'a, T>,
-}
+pub struct Rows<'a, T>(std::slice::Chunks<'a, T>);
 
 impl<'a, T> Iterator for Rows<'a, T> {
     type Item = &'a [T];
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.wrapped.next()
+        self.0.next()
     }
 }
 
-pub struct RowsMut<'a, T> {
-    wrapped: std::slice::ChunksMut<'a, T>,
-}
+pub struct RowsMut<'a, T>(std::slice::ChunksMut<'a, T>);
 
 impl<'a, T> Iterator for RowsMut<'a, T> {
     type Item = &'a mut [T];
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.wrapped.next()
+        self.0.next()
     }
 }
-// type Rows<'a, Tile> = std::slice::Chunks<'a, Tile>;
-// type RowsMut<'a, Tile> = std::slice::ChunksMut<'a, Tile>;
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -582,7 +560,7 @@ mod tests {
         let mut map = Labyrinth2D::new(3, 3);
 
         let mut phasewall = Tile::wall();
-        phasewall.add_movetype(&MoveType::custom("phasing"));
+        phasewall.add_movetype(MoveType::custom("phasing"));
 
         let center = map.point2d_to_index(Point::new(1, 1));
 
@@ -625,10 +603,10 @@ mod tests {
 
         assert!(!map.can_enter(target, &[MoveType::Walk]));
 
-        map.add_movetypes(target, &[MoveType::Walk]);
+        map.add_movetypes(target, [MoveType::Walk]);
         assert!(map.can_enter(target, &[MoveType::Walk]));
 
-        map.add_movetypes(target, &[MoveType::custom("dig")]);
+        map.add_movetypes(target, [MoveType::custom("dig")]);
         assert!(map.can_enter(target, &[MoveType::custom("dig")]));
     }
 

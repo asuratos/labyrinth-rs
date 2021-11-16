@@ -158,11 +158,22 @@ impl Tile {
     /// Adds a custom movement property to the tile. Whether or not it can be
     /// accessed via a user-defined movement method.
     /// (i.e. lava walking, digging, etc.)
-    pub fn add_movetype(&mut self, movtype: &MoveType) -> bool {
+    pub fn add_movetype(&mut self, movtype: MoveType) -> bool {
         match movtype {
             MoveType::Custom(str) => self.access.insert(MoveType::custom(str)),
             _ => self.access.insert(movtype.clone()),
         }
+    }
+
+    pub fn add_movetypes<T>(&mut self, movtypes: T)
+    where
+        T: IntoIterator<Item = MoveType>,
+    {
+        self.access
+            .extend(movtypes.into_iter().map(|movtype| match movtype {
+                MoveType::Custom(str) => MoveType::custom(str),
+                _ => movtype.clone(),
+            }))
     }
 
     /// Removes a custom movement property to the tile. Whether or not it can be
@@ -178,7 +189,8 @@ impl Tile {
     /// Checks if an entity with the given move types can enter the tile.
     pub fn can_enter<'a, T>(&self, move_types: T) -> bool
     where
-        T: IntoIterator<Item = &'a MoveType>,
+        T: IntoIterator<Item = &'a 
+        MoveType>,
     {
         move_types
             .into_iter()
@@ -371,7 +383,7 @@ mod tests {
     #[test]
     fn movetypes_can_be_directly_added_to_tiles() -> Result<(), String> {
         let mut tile = Tile::wall();
-        tile.add_movetype(&MoveType::custom("dig"));
+        tile.add_movetype(MoveType::custom("dig"));
 
         assert!(tile.can_enter(&[MoveType::custom("dig")]));
         Ok(())
@@ -381,13 +393,13 @@ mod tests {
     fn tile_enterable_with_custom_movetype() {
         let custom_tile = Tile::new("softwall", false, [MoveType::custom("dig")]);
 
-        assert!(custom_tile.can_enter(&[MoveType::Custom("dig".to_string())]));
+        assert!(custom_tile.can_enter(&[MoveType::custom("dig")]));
     }
 
     #[test]
     fn custom_movetypes_are_case_insensitive() {
         let mut tile = Tile::wall();
-        tile.add_movetype(&MoveType::custom("Dig"));
+        tile.add_movetype(MoveType::custom("Dig"));
 
         assert!(tile.can_enter(&[MoveType::Custom("dig".to_string())]));
         assert!(tile.can_enter(&[MoveType::Custom("Dig".to_string())]));
@@ -398,13 +410,21 @@ mod tests {
         let mut tile1 = Tile::wall();
         let mut tile2 = Tile::wall();
 
-        tile1.add_movetype(&MoveType::Fly);
-        tile1.add_movetype(&MoveType::Walk);
+        tile1.add_movetype(MoveType::Fly);
+        tile1.add_movetype(MoveType::Walk);
 
-        tile2.add_movetype(&MoveType::Walk);
-        tile2.add_movetype(&MoveType::Fly);
+        tile2.add_movetype(MoveType::Walk);
+        tile2.add_movetype(MoveType::Fly);
 
         assert_eq!(tile1, tile2);
+
+        let mut tile3 = Tile::wall();
+        let mut tile4 = Tile::wall();
+
+        tile3.add_movetypes([MoveType::Fly, MoveType::Walk]);
+        tile4.add_movetypes([MoveType::Walk, MoveType::Fly]);
+
+        assert_eq!(tile3, tile4);
     }
 
     #[test]
