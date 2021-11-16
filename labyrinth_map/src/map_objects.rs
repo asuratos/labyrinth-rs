@@ -55,18 +55,16 @@ impl BaseMap for Labyrinth2D {
             Point::new(0, 1),
         ];
 
-        let filter: &[MoveType] = self._filter.as_slice();
-
         deltas
             .iter()
             // apply each delta to the point
             .map(|&diff| start + diff)
             // filter to only points in map bounds
             .filter(|&pt| self.in_bounds(pt))
+            // // filter to only tiles that are walkable
+            .filter(|&pt| self.can_enter(pt, &self._filter))
             // map points -> vector indices
             .map(|pt| self.point2d_to_index(pt))
-            // filter to only tiles that are walkable
-            .filter(|&pos| self.tiles[pos].can_enter(filter))
             // package into final struct
             // TODO: Make the cost variable (have can_enter return (bool, float)?)
             .map(|pos| (pos, 1.0))
@@ -203,40 +201,30 @@ impl Labyrinth2D {
             self._filter.sort();
         }
 
-        a_star_search(
+        let path = a_star_search(
             self.point2d_to_index(start),
             self.point2d_to_index(end),
             self,
-        )
+        );
+
+        self._filter.clear();
+        path
     }
-
-    // /// Find the path between two [`Points`](Point) by walking
-    // pub fn find_path_walk(&self, start: Point, end: Point) -> NavigationPath {
-    //     a_star_search(
-    //         self.point2d_to_index(start),
-    //         self.point2d_to_index(end),
-    //         self,
-    //     )
-    // }
-
-    // /// Find the path between two [`Points`](Point) by flying
-    // pub fn find_path_fly(&mut self, start: Point, end: Point) -> NavigationPath {
-    //     self.find_path(start, end, &[MoveType::Fly])
-    // }
-
-    // /// Find the path between two [`Points`](Point) by swimming
-    // pub fn find_path_swim(&mut self, start: Point, end: Point) -> NavigationPath {
-    //     self.find_path(start, end, &[MoveType::Swim])
-    // }
 
     /// Returns Dijkstra map for a set of starting [`Points`](Point), given
     /// the movement types of the entity.
     // TODO: Examples here
-    pub fn dijkstra_map(&mut self, starts: &[Point], move_types: &[MoveType]) -> DijkstraMap {
+    pub fn dijkstra_map<T>(&mut self, starts: &[Point], move_types: T) -> DijkstraMap
+    where
+        T: Into<Vec<MoveType>>,
+    {
+        let move_types_vec: Vec<MoveType> = move_types.into();
         // if the MoveType is only walk, then it can be done on the map itself
-        if move_types == [MoveType::Walk] || move_types == [] {
+        if move_types_vec == [MoveType::Walk] || move_types_vec == [] {
             self._filter = vec![MoveType::Walk];
-            return self.dijkstra_map_walk(starts);
+        } else {
+            self._filter = move_types_vec;
+            self._filter.sort();
         }
 
         let Point {
@@ -246,32 +234,9 @@ impl Labyrinth2D {
 
         let starts_idx: Vec<usize> = starts.iter().map(|&pt| self.point2d_to_index(pt)).collect();
 
-        self._filter = move_types.to_vec();
-        self._filter.sort();
-
-        DijkstraMap::new(size_x, size_y, &starts_idx, self, 1024.0)
-    }
-
-    /// Constructs the Dijkstra map for an entity that can only walk
-    pub fn dijkstra_map_walk(&self, starts: &[Point]) -> DijkstraMap {
-        let Point {
-            x: size_x,
-            y: size_y,
-        } = self.dimensions;
-
-        let starts_idx: Vec<usize> = starts.iter().map(|&pt| self.point2d_to_index(pt)).collect();
-
-        DijkstraMap::new(size_x, size_y, &starts_idx, self, 1024.0)
-    }
-
-    /// Constructs the Dijkstra map for an entity that can only fly
-    pub fn dijkstra_map_fly(&mut self, starts: &[Point]) -> DijkstraMap {
-        self.dijkstra_map(starts, &[MoveType::Fly])
-    }
-
-    /// Constructs the Dijkstra map for an entity that can only swim
-    pub fn dijkstra_map_swim(&mut self, starts: &[Point]) -> DijkstraMap {
-        self.dijkstra_map(starts, &[MoveType::Swim])
+        let dmap = DijkstraMap::new(size_x, size_y, &starts_idx, self, 1024.0);
+        self._filter.clear();
+        dmap
     }
 
     // ---------------- Map editing methods --------------
@@ -289,7 +254,7 @@ impl Labyrinth2D {
 
     /// Gets the accessibility of a tile at a given [`Point`]
     pub fn tile_access(&self, loc: Point) -> &HashSet<MoveType> {
-        self.tile_at(loc).accessbility()
+        self.tile_at(loc).access()
     }
 
     /// Gets the tile kind of the tile at a given [`Point`]
@@ -634,51 +599,29 @@ mod tests {
         assert!(map.tile_kind(target) == "crystal");
     }
 
-    // #[test]
-    // fn test_set_floor() {
-    //     let mut map = Labyrinth2D::new(3, 3);
+    // Pathfinding tests
+    #[test]
+    fn find_path_resets_filter() {
+        let mut map = Labyrinth2D::new(3, 3);
+        let start = Point::new(0, 0);
+        let end = Point::new(2, 2);
 
-    //     let target = Point::new(1, 1);
-    //     map.set_floor(target);
-    //     let tile = map.tile_at(target);
+        map._filter = vec![MoveType::Fly];
 
-    //     assert!(!tile.opaque);
-    //     assert!(map.tile_access(target) == &set![MoveType::Walk, MoveType::Fly]);
-    // }
+        map.find_path(start, end, [MoveType::Walk]);
 
-    // #[test]
-    // fn test_set_water() {
-    //     let mut map = Labyrinth2D::new(3, 3);
+        assert_eq!(map._filter, vec![]);
+    }
 
-    //     let target = Point::new(1, 1);
-    //     map.set_water(target);
-    //     let tile = map.tile_at(target);
+    #[test]
+    fn dijkstra_resets_filter() {
+        let mut map = Labyrinth2D::new(3, 3);
+        let start = Point::new(0, 0);
 
-    //     assert!(!tile.opaque);
-    //     assert!(map.tile_access(target) == &set![MoveType::Swim, MoveType::Fly]);
-    // }
+        map._filter = vec![MoveType::Fly];
 
-    // #[test]
-    // fn test_set_lava() {
-    //     let mut map = Labyrinth2D::new(3, 3);
+        map.dijkstra_map(&[start], [MoveType::Walk]);
 
-    //     let target = Point::new(1, 1);
-    //     map.set_lava(target);
-    //     let tile = map.tile_at(target);
-
-    //     assert!(!tile.opaque);
-    //     assert!(map.tile_access(target) == &set![MoveType::Fly]);
-    // }
-
-    // #[test]
-    // fn test_set_chasm() {
-    //     let mut map = Labyrinth2D::new(3, 3);
-
-    //     let target = Point::new(1, 1);
-    //     map.set_chasm(target);
-    //     let tile = map.tile_at(target);
-
-    //     assert!(!tile.opaque);
-    //     assert!(map.tile_access(target) == &set![MoveType::Fly]);
-    // }
+        assert_eq!(map._filter, vec![]);
+    }
 }

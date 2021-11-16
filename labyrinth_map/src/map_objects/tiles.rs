@@ -187,10 +187,10 @@ impl Tile {
     }
 
     /// Checks if an entity with the given move types can enter the tile.
+    /// Transforms MoveType::Custom strings into lowercase before matching
     pub fn can_enter<'a, T>(&self, move_types: T) -> bool
     where
-        T: IntoIterator<Item = &'a 
-        MoveType>,
+        T: IntoIterator<Item = &'a MoveType>,
     {
         move_types
             .into_iter()
@@ -202,7 +202,7 @@ impl Tile {
     }
 
     /// Returns the accessibility of a tile
-    pub fn accessbility(&self) -> &HashSet<MoveType> {
+    pub fn access(&self) -> &HashSet<MoveType> {
         &self.access
     }
 }
@@ -472,7 +472,7 @@ mod tests {
         expected_access.insert(MoveType::Swim);
         expected_access.insert(MoveType::Custom(String::from("liquidwalk")));
 
-        assert_eq!(newtile.accessbility(), &expected_access);
+        assert_eq!(newtile.access(), &expected_access);
         Ok(())
     }
 }
