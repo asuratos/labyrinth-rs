@@ -11,9 +11,6 @@ mod tiles;
 pub use tiles::MoveType;
 pub use tiles::*;
 
-type Rows<'a, Tile> = std::slice::Chunks<'a, Tile>;
-type RowsMut<'a, Tile> = std::slice::ChunksMut<'a, Tile>;
-
 // TODO: Better Map struct documentation
 /// Labyrinth2D struct, the output of the MapGenerator2D.
 ///
@@ -196,12 +193,13 @@ impl Labyrinth2D {
         // the Map as-is
         if move_types == [MoveType::Walk] || move_types == [] {
             self._filter = vec![MoveType::Walk];
-            return self.find_path_walk(start, end);
+            // return self.find_path_walk(start, end);
+        } else {
+            // if it's not walk, then
+            self._filter = move_types.to_vec();
+            self._filter.sort();
         }
 
-        self._filter = move_types.to_vec();
-        self._filter.sort();
-
         a_star_search(
             self.point2d_to_index(start),
             self.point2d_to_index(end),
@@ -209,31 +207,31 @@ impl Labyrinth2D {
         )
     }
 
-    /// Find the path between two [`Points`](Point) by walking
-    pub fn find_path_walk(&self, start: Point, end: Point) -> NavigationPath {
-        a_star_search(
-            self.point2d_to_index(start),
-            self.point2d_to_index(end),
-            self,
-        )
-    }
+    // /// Find the path between two [`Points`](Point) by walking
+    // pub fn find_path_walk(&self, start: Point, end: Point) -> NavigationPath {
+    //     a_star_search(
+    //         self.point2d_to_index(start),
+    //         self.point2d_to_index(end),
+    //         self,
+    //     )
+    // }
 
-    /// Find the path between two [`Points`](Point) by flying
-    pub fn find_path_fly(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path(start, end, &[MoveType::Fly])
-    }
+    // /// Find the path between two [`Points`](Point) by flying
+    // pub fn find_path_fly(&mut self, start: Point, end: Point) -> NavigationPath {
+    //     self.find_path(start, end, &[MoveType::Fly])
+    // }
 
-    /// Find the path between two [`Points`](Point) by swimming
-    pub fn find_path_swim(&mut self, start: Point, end: Point) -> NavigationPath {
-        self.find_path(start, end, &[MoveType::Swim])
-    }
+    // /// Find the path between two [`Points`](Point) by swimming
+    // pub fn find_path_swim(&mut self, start: Point, end: Point) -> NavigationPath {
+    //     self.find_path(start, end, &[MoveType::Swim])
+    // }
 
     /// Returns Dijkstra map for a set of starting [`Points`](Point), given
     /// the movement types of the entity.
     // TODO: Examples here
     pub fn dijkstra_map(&mut self, starts: &[Point], move_types: &[MoveType]) -> DijkstraMap {
         // if the MoveType is only walk, then it can be done on the map itself
-        if move_types == [MoveType::Walk] {
+        if move_types == [MoveType::Walk] || move_types == [] {
             self._filter = vec![MoveType::Walk];
             return self.dijkstra_map_walk(starts);
         }
@@ -370,15 +368,44 @@ impl Labyrinth2D {
 
     // TODO: Rows struct as chunks
     pub fn rows(&self) -> Rows<Tile> {
-        self.tiles.chunks(self.dimensions().x as usize)
+        Rows {
+            wrapped: self.tiles.chunks(self.dimensions().x as usize),
+        }
     }
 
     pub fn rows_mut(&mut self) -> RowsMut<Tile> {
         let width = self.dimensions().x as usize;
-        self.tiles.chunks_mut(width)
+        RowsMut {
+            wrapped: self.tiles.chunks_mut(width),
+        }
     }
 }
 
+pub struct Rows<'a, T> {
+    wrapped: std::slice::Chunks<'a, T>,
+}
+
+impl<'a, T> Iterator for Rows<'a, T> {
+    type Item = &'a [T];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.wrapped.next()
+    }
+}
+
+pub struct RowsMut<'a, T> {
+    wrapped: std::slice::ChunksMut<'a, T>,
+}
+
+impl<'a, T> Iterator for RowsMut<'a, T> {
+    type Item = &'a mut [T];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.wrapped.next()
+    }
+}
+// type Rows<'a, Tile> = std::slice::Chunks<'a, Tile>;
+// type RowsMut<'a, Tile> = std::slice::ChunksMut<'a, Tile>;
 #[cfg(test)]
 mod tests {
     use super::*;

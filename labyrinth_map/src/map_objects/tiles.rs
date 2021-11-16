@@ -39,7 +39,10 @@ pub enum MoveType {
 impl MoveType {
     /// Convenience function for building a MoveType::Custom.
     /// Converts to lowercase.
-    pub fn custom<T: Into<String>>(movtype: T) -> MoveType {
+    pub fn custom<T>(movtype: T) -> MoveType
+    where
+        T: Into<String>,
+    {
         let lcase = movtype.into().to_lowercase();
 
         MoveType::Custom(lcase)
@@ -266,7 +269,7 @@ impl TileBuilder {
     }
 
     //TODO: Builder Error?
-    pub fn build(mut self) -> Result<Tile, String> {
+    pub fn build(self) -> Result<Tile, String> {
         if self.opaque.is_none() && self.kind.is_none() {
             return Err(String::from("Builder not fully initialized!"));
         }
@@ -370,7 +373,7 @@ mod tests {
         let mut tile = Tile::wall();
         tile.add_movetype(&MoveType::custom("dig"));
 
-        assert!(tile.can_enter(&[MoveType::Custom("dig".to_string())]));
+        assert!(tile.can_enter(&[MoveType::custom("dig")]));
         Ok(())
     }
 
@@ -388,6 +391,20 @@ mod tests {
 
         assert!(tile.can_enter(&[MoveType::Custom("dig".to_string())]));
         assert!(tile.can_enter(&[MoveType::Custom("Dig".to_string())]));
+    }
+
+    #[test]
+    fn movetypes_are_order_insensitive() {
+        let mut tile1 = Tile::wall();
+        let mut tile2 = Tile::wall();
+
+        tile1.add_movetype(&MoveType::Fly);
+        tile1.add_movetype(&MoveType::Walk);
+
+        tile2.add_movetype(&MoveType::Walk);
+        tile2.add_movetype(&MoveType::Fly);
+
+        assert_eq!(tile1, tile2);
     }
 
     #[test]
