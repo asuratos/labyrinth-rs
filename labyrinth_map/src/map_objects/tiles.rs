@@ -137,7 +137,10 @@ impl Tile {
         &self.kind
     }
 
-    pub fn set_kind<T: Into<String>>(&mut self, kind: T) {
+    pub fn set_kind<T>(&mut self, kind: T)
+    where
+        T: Into<String>,
+    {
         self.kind = kind.into().to_lowercase();
     }
 
@@ -170,9 +173,9 @@ impl Tile {
     }
 
     /// Checks if an entity with the given move types can enter the tile.
-    pub fn can_enter<T>(&self, move_types: T) -> bool
+    pub fn can_enter<'a, T>(&self, move_types: T) -> bool
     where
-        T: IntoIterator<Item = MoveType>,
+        T: IntoIterator<Item = &'a MoveType>,
     {
         move_types
             .into_iter()
@@ -244,7 +247,10 @@ impl TileBuilder {
         }
     }
 
-    pub fn with_kind<T: Into<String>>(mut self, kind: T) -> TileBuilder {
+    pub fn with_kind<T>(mut self, kind: T) -> TileBuilder
+    where
+        T: Into<String>,
+    {
         self.kind = Some(kind.into().to_lowercase());
         self
     }
@@ -259,6 +265,7 @@ impl TileBuilder {
         self
     }
 
+    //TODO: Builder Error?
     pub fn build(mut self) -> Result<Tile, String> {
         if self.opaque.is_none() && self.kind.is_none() {
             return Err(String::from("Builder not fully initialized!"));
@@ -341,21 +348,21 @@ mod tests {
     fn tile_enterable_with_one_matching_movtype() {
         let custom_tile = Tile::floor();
 
-        assert!(custom_tile.can_enter([MoveType::Walk]));
+        assert!(custom_tile.can_enter(&[MoveType::Walk]));
     }
 
     #[test]
     fn tile_enterable_with_multiple_matching_movtype() {
         let custom_tile = Tile::floor();
 
-        assert!(custom_tile.can_enter([MoveType::Walk, MoveType::Fly]));
+        assert!(custom_tile.can_enter(&[MoveType::Walk, MoveType::Fly]));
     }
 
     #[test]
     fn tile_enterable_with_matching_and_unmatching_movtype() {
         let custom_tile = Tile::floor();
 
-        assert!(custom_tile.can_enter([MoveType::Walk, MoveType::Swim]));
+        assert!(custom_tile.can_enter(&[MoveType::Walk, MoveType::Swim]));
     }
 
     #[test]
@@ -363,7 +370,7 @@ mod tests {
         let mut tile = Tile::wall();
         tile.add_movetype(&MoveType::custom("dig"));
 
-        assert!(tile.can_enter([MoveType::Custom("dig".to_string())]));
+        assert!(tile.can_enter(&[MoveType::Custom("dig".to_string())]));
         Ok(())
     }
 
@@ -371,7 +378,7 @@ mod tests {
     fn tile_enterable_with_custom_movetype() {
         let custom_tile = Tile::new("softwall", false, [MoveType::custom("dig")]);
 
-        assert!(custom_tile.can_enter([MoveType::Custom("dig".to_string())]));
+        assert!(custom_tile.can_enter(&[MoveType::Custom("dig".to_string())]));
     }
 
     #[test]
@@ -379,14 +386,14 @@ mod tests {
         let mut tile = Tile::wall();
         tile.add_movetype(&MoveType::custom("Dig"));
 
-        assert!(tile.can_enter([MoveType::Custom("dig".to_string())]));
-        assert!(tile.can_enter([MoveType::Custom("Dig".to_string())]));
+        assert!(tile.can_enter(&[MoveType::Custom("dig".to_string())]));
+        assert!(tile.can_enter(&[MoveType::Custom("Dig".to_string())]));
     }
 
     #[test]
     fn tile_not_enterable() {
         let custom_tile = Tile::floor();
-        let res = custom_tile.can_enter([MoveType::Swim]);
+        let res = custom_tile.can_enter(&[MoveType::Swim]);
 
         assert!(!res);
     }

@@ -69,7 +69,7 @@ impl BaseMap for Labyrinth2D {
             // map points -> vector indices
             .map(|pt| self.point2d_to_index(pt))
             // filter to only tiles that are walkable
-            .filter(|&pos| self.tiles[pos].can_enter(filter.to_owned()))
+            .filter(|&pos| self.tiles[pos].can_enter(filter))
             // package into final struct
             // TODO: Make the cost variable (have can_enter return (bool, float)?)
             .map(|pos| (pos, 1.0))
@@ -166,11 +166,14 @@ impl Labyrinth2D {
     /// Checks if the tile at a given [`Point`] can be entered for an entity
     /// with the specified movement types.
     pub fn can_enter(&self, loc: Point, move_types: &[MoveType]) -> bool {
-        self.tile_at(loc).can_enter(move_types.to_vec())
+        self.tile_at(loc).can_enter(move_types)
     }
 
-    pub fn get_neighbors(&mut self, loc: Point, move_types: &[MoveType]) -> Vec<Point> {
-        self._filter = move_types.to_vec();
+    pub fn get_neighbors<T>(&mut self, loc: Point, move_types: T) -> Vec<Point>
+    where
+        T: Into<Vec<MoveType>>,
+    {
+        self._filter = move_types.into();
 
         let idx = self.point2d_to_index(loc);
 
@@ -365,6 +368,7 @@ impl Labyrinth2D {
         self.tiles.iter_mut()
     }
 
+    // TODO: Rows struct as chunks
     pub fn rows(&self) -> Rows<Tile> {
         self.tiles.chunks(self.dimensions().x as usize)
     }
