@@ -1,8 +1,8 @@
 //! Module for serialization-related code
 
-use super::{Labyrinth2D, Point, Tile};
+use super::{Labyrinth2D, MoveType, Point, Tile};
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use serde::de::{Deserialize, Deserializer, Error, MapAccess, Visitor};
@@ -77,18 +77,19 @@ impl Labyrinth2D {
                     }
                 };
 
+                let newtile = tile.clone();
                 // add tile to tiledict with the key
-                tiledict.insert(tile.clone().kind, (newkey, tile.clone()));
+                tiledict.insert(newtile.kind().to_owned(), (newkey, newtile));
             }
         }
 
-        for row in self.iter_rows() {
+        for row in self.rows() {
             // TODO: check if row is complete here
 
             let mut mapstrrow = String::new();
             for tile in row {
                 // get the representation of the tile
-                let kind: &str = &tile.kind;
+                let kind: &str = &tile.kind();
 
                 let to_push = match tiledict.get(kind) {
                     Some((c, _)) => *c,
@@ -177,6 +178,7 @@ impl<'de> Deserialize<'de> for Labyrinth2D {
         enum Field {
             Mapstring,
             Tiledict,
+            // _Filter
         }
 
         struct Labyrinth2DVisitor;
@@ -221,5 +223,43 @@ impl<'de> Deserialize<'de> for Labyrinth2D {
 
         const FIELDS: &'static [&'static str] = &["mapstring", "tiledict"];
         deserializer.deserialize_struct("Labyrinth2D", FIELDS, Labyrinth2DVisitor)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use ron;
+
+    fn serialize_then_deserialize(map: &Labyrinth2D) -> Result<Labyrinth2D, ron::Error> {
+        let mapstr = ron::to_string(map)?;
+        ron::from_str(&mapstr)
+    }
+
+    fn assert_reversible(map: &Labyrinth2D) {
+        let map2 = serialize_then_deserialize(map).expect("Error when asserting reversibility");
+        assert_eq!(map, &map2);
+    }
+
+    #[test]
+    fn serialize_is_reversible() {
+        // maps from constructors
+        assert_reversible(&Labyrinth2D::new(3, 3));
+        assert_reversible(&Labyrinth2D::new_empty(3, 3));
+        assert_reversible(&Labyrinth2D::new_walled(3, 3));
+
+        //customized maps
+        let center = Point { x: 1, y: 1 };
+        let mut map_with_custom_movetype = Labyrinth2D::new(3, 3);
+
+        let phasewall = Tile::new(
+            "phasewall",
+            false,
+            &[MoveType::Custom(String::from("phase"))],
+        );
+        map_with_custom_movetype.set_tile_at(center, phasewall);
+
+        assert_reversible(&map_with_custom_movetype);
     }
 }

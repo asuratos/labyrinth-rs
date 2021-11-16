@@ -7,10 +7,12 @@ use bracket_pathfinding::prelude::*;
 #[cfg(feature = "serialization")]
 mod labyrinth_serialization;
 
-#[macro_use]
 mod tiles;
 pub use tiles::MoveType;
-use tiles::*;
+pub use tiles::*;
+
+type Rows<'a, Tile> = std::slice::Chunks<'a, Tile>;
+type RowsMut<'a, Tile> = std::slice::ChunksMut<'a, Tile>;
 
 // TODO: Better Map struct documentation
 /// Labyrinth2D struct, the output of the MapGenerator2D.
@@ -24,7 +26,7 @@ use tiles::*;
 ///
 /// let map = Labyrinth2D::new(10,10);
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Labyrinth2D {
     // The vector of tiles in the map.
     tiles: Vec<Tile>,
@@ -44,7 +46,7 @@ impl Algorithm2D for Labyrinth2D {
 
 impl BaseMap for Labyrinth2D {
     fn is_opaque(&self, _idx: usize) -> bool {
-        self.tiles[_idx].opaque
+        self.tiles[_idx].is_opaque()
     }
 
     fn get_available_exits(&self, _idx: usize) -> SmallVec<[(usize, f32); 10]> {
@@ -79,6 +81,12 @@ impl BaseMap for Labyrinth2D {
     }
 }
 
+impl PartialEq for Labyrinth2D {
+    fn eq(&self, other: &Self) -> bool {
+        self.tiles == other.tiles && self.dimensions == other.dimensions
+    }
+}
+
 impl Labyrinth2D {
     // ------------------ Constructors ---------------------------
     /// Constructs a new Labyrinth with the passed width and height values.
@@ -88,7 +96,7 @@ impl Labyrinth2D {
         Labyrinth2D {
             tiles: vec![Default::default(); width * height],
             dimensions: Point::new(width, height),
-            _filter: vec![MoveType::Walk],
+            _filter: vec![],
         }
     }
 
@@ -99,7 +107,7 @@ impl Labyrinth2D {
         Labyrinth2D {
             tiles: vec![Tile::floor(); width * height],
             dimensions: Point::new(width, height),
-            _filter: vec![MoveType::Walk],
+            _filter: vec![],
         }
     }
 
@@ -127,7 +135,7 @@ impl Labyrinth2D {
         Labyrinth2D {
             tiles,
             dimensions: Point::new(width, height),
-            _filter: vec![MoveType::Walk],
+            _filter: vec![],
         }
     }
 
@@ -159,6 +167,17 @@ impl Labyrinth2D {
         self.tile_at(loc).can_enter(move_types)
     }
 
+    pub fn get_neighbors(&mut self, loc: Point, move_types: &[MoveType]) -> Vec<Point> {
+        self._filter = move_types.to_vec();
+
+        let idx = self.point2d_to_index(loc);
+
+        self.get_available_exits(idx)
+            .iter()
+            .map(|(idx, _)| self.index_to_point2d(*idx))
+            .collect()
+    }
+
     /// Find the path between two [`Points`](Point) for an entity with multiple
     /// movement types.
     // TODO: Examples here
@@ -170,7 +189,7 @@ impl Labyrinth2D {
     ) -> NavigationPath {
         // If the movetype is only walk, then pathfinding can be done on
         // the Map as-is
-        if move_types == [MoveType::Walk] {
+        if move_types == [MoveType::Walk] || move_types == [] {
             self._filter = vec![MoveType::Walk];
             return self.find_path_walk(start, end);
         }
@@ -268,49 +287,49 @@ impl Labyrinth2D {
     }
 
     /// Gets the tile kind of the tile at a given [`Point`]
-    pub fn tile_kind(&self, loc: Point) -> &str {
-        &self.tile_at(loc).kind
-    }
-
-    /// Sets the kind of the tile at a given [`Point`]
-    pub fn set_tile_kind(&mut self, loc: Point, kind: &str) {
-        self.tile_at_mut(loc).kind = kind.to_lowercase();
-    }
-
-    /// Sets the opacity of a tile at a given [`Point`].
-    pub fn set_opacity(&mut self, loc: Point, opaque: bool) {
-        self.tile_at_mut(loc).opaque = opaque;
+    pub fn tile_kind(&self, loc: Point) -> &String {
+        self.tile_at(loc).kind()
     }
 
     /// Sets the tile at the given [`Point`](Point) to a [`Tile`].
-    fn set_tile_at(&mut self, loc: Point, tile: Tile) {
+    pub fn set_tile_at(&mut self, loc: Point, tile: Tile) {
         *self.tile_at_mut(loc) = tile;
     }
 
-    /// Sets the tile at the given [`Point`](Point) to a basic floor.
-    pub fn set_floor(&mut self, loc: Point) {
-        self.set_tile_at(loc, Tile::floor());
+    /// Sets the kind of the tile at a given [`Point`]
+    pub fn set_tile_kind<T: Into<String>>(&mut self, loc: Point, kind: T) {
+        self.tile_at_mut(loc).set_kind(kind);
     }
 
-    /// Sets the tile at the given [`Point`](Point) to a basic wall.
-    pub fn set_wall(&mut self, loc: Point) {
-        self.set_tile_at(loc, Tile::wall());
+    /// Sets the opacity of a tile at a given [`Point`].
+    pub fn set_tile_opacity(&mut self, loc: Point, opaque: bool) {
+        self.tile_at_mut(loc).set_opacity(opaque);
     }
 
-    /// Sets the tile at the given [`Point`](Point) to a basic water tile.
-    pub fn set_water(&mut self, loc: Point) {
-        self.set_tile_at(loc, Tile::water());
-    }
+    // /// Sets the tile at the given [`Point`](Point) to a basic floor.
+    // pub fn set_floor(&mut self, loc: Point) {
+    //     self.set_tile_at(loc, Tile::floor());
+    // }
 
-    /// Sets the tile at the given [`Point`](Point) to a basic lava tile.
-    pub fn set_lava(&mut self, loc: Point) {
-        self.set_tile_at(loc, Tile::lava());
-    }
+    // /// Sets the tile at the given [`Point`](Point) to a basic wall.
+    // pub fn set_wall(&mut self, loc: Point) {
+    //     self.set_tile_at(loc, Tile::wall());
+    // }
 
-    /// Sets the tile at the given [`Point`](Point) to a basic chasm tile.
-    pub fn set_chasm(&mut self, loc: Point) {
-        self.set_tile_at(loc, Tile::chasm());
-    }
+    // /// Sets the tile at the given [`Point`](Point) to a basic water tile.
+    // pub fn set_water(&mut self, loc: Point) {
+    //     self.set_tile_at(loc, Tile::water());
+    // }
+
+    // /// Sets the tile at the given [`Point`](Point) to a basic lava tile.
+    // pub fn set_lava(&mut self, loc: Point) {
+    //     self.set_tile_at(loc, Tile::lava());
+    // }
+
+    // /// Sets the tile at the given [`Point`](Point) to a basic chasm tile.
+    // pub fn set_chasm(&mut self, loc: Point) {
+    //     self.set_tile_at(loc, Tile::chasm());
+    // }
 
     /// Adds a set of movetypes to a tile at the given [`Point`](Point).
     pub fn add_movetypes(&mut self, loc: Point, move_types: &[MoveType]) {
@@ -344,11 +363,11 @@ impl Labyrinth2D {
         self.tiles.iter_mut()
     }
 
-    pub fn iter_rows(&self) -> std::slice::Chunks<Tile> {
+    pub fn rows(&self) -> Rows<Tile> {
         self.tiles.chunks(self.dimensions().x as usize)
     }
 
-    pub fn iter_rows_mut(&mut self) -> std::slice::ChunksMut<Tile> {
+    pub fn rows_mut(&mut self) -> RowsMut<Tile> {
         let width = self.dimensions().x as usize;
         self.tiles.chunks_mut(width)
     }
@@ -372,9 +391,11 @@ mod tests {
 
     #[test]
     fn out_of_bounds_neighbors_are_ignored() {
-        let map = Labyrinth2D::new_empty(3, 3);
+        let mut map = Labyrinth2D::new_empty(3, 3);
+        map._filter = vec![MoveType::Walk];
 
         println!("{:?}", map.get_available_exits(4));
+
         assert_eq!(count_neighbors(&map, 4), 4); // Center
 
         assert_eq!(count_neighbors(&map, 0), 2); // Upper left corner
@@ -466,7 +487,7 @@ mod tests {
 
     #[test]
     fn walk_on_default_tiles() {
-        let map = prepare_testmap_3x3();
+        let map = prepare_testmap_3x3_for_movtype(&[MoveType::Walk]);
 
         let center = map.point2d_to_index(Point::new(1, 1));
         let expected: SmallVec<[(usize, f32); 10]> =
@@ -559,7 +580,7 @@ mod tests {
         let target_idx = map.point2d_to_index(target);
 
         assert!(map.is_opaque(target_idx));
-        map.set_opacity(target, false);
+        map.set_tile_opacity(target, false);
         assert!(!map.is_opaque(target_idx));
     }
 
@@ -602,51 +623,51 @@ mod tests {
         assert!(map.tile_kind(target) == "crystal");
     }
 
-    #[test]
-    fn test_set_floor() {
-        let mut map = Labyrinth2D::new(3, 3);
+    // #[test]
+    // fn test_set_floor() {
+    //     let mut map = Labyrinth2D::new(3, 3);
 
-        let target = Point::new(1, 1);
-        map.set_floor(target);
-        let tile = map.tile_at(target);
+    //     let target = Point::new(1, 1);
+    //     map.set_floor(target);
+    //     let tile = map.tile_at(target);
 
-        assert!(!tile.opaque);
-        assert!(map.tile_access(target) == &set![MoveType::Walk, MoveType::Fly]);
-    }
+    //     assert!(!tile.opaque);
+    //     assert!(map.tile_access(target) == &set![MoveType::Walk, MoveType::Fly]);
+    // }
 
-    #[test]
-    fn test_set_water() {
-        let mut map = Labyrinth2D::new(3, 3);
+    // #[test]
+    // fn test_set_water() {
+    //     let mut map = Labyrinth2D::new(3, 3);
 
-        let target = Point::new(1, 1);
-        map.set_water(target);
-        let tile = map.tile_at(target);
+    //     let target = Point::new(1, 1);
+    //     map.set_water(target);
+    //     let tile = map.tile_at(target);
 
-        assert!(!tile.opaque);
-        assert!(map.tile_access(target) == &set![MoveType::Swim, MoveType::Fly]);
-    }
+    //     assert!(!tile.opaque);
+    //     assert!(map.tile_access(target) == &set![MoveType::Swim, MoveType::Fly]);
+    // }
 
-    #[test]
-    fn test_set_lava() {
-        let mut map = Labyrinth2D::new(3, 3);
+    // #[test]
+    // fn test_set_lava() {
+    //     let mut map = Labyrinth2D::new(3, 3);
 
-        let target = Point::new(1, 1);
-        map.set_lava(target);
-        let tile = map.tile_at(target);
+    //     let target = Point::new(1, 1);
+    //     map.set_lava(target);
+    //     let tile = map.tile_at(target);
 
-        assert!(!tile.opaque);
-        assert!(map.tile_access(target) == &set![MoveType::Fly]);
-    }
+    //     assert!(!tile.opaque);
+    //     assert!(map.tile_access(target) == &set![MoveType::Fly]);
+    // }
 
-    #[test]
-    fn test_set_chasm() {
-        let mut map = Labyrinth2D::new(3, 3);
+    // #[test]
+    // fn test_set_chasm() {
+    //     let mut map = Labyrinth2D::new(3, 3);
 
-        let target = Point::new(1, 1);
-        map.set_chasm(target);
-        let tile = map.tile_at(target);
+    //     let target = Point::new(1, 1);
+    //     map.set_chasm(target);
+    //     let tile = map.tile_at(target);
 
-        assert!(!tile.opaque);
-        assert!(map.tile_access(target) == &set![MoveType::Fly]);
-    }
+    //     assert!(!tile.opaque);
+    //     assert!(map.tile_access(target) == &set![MoveType::Fly]);
+    // }
 }

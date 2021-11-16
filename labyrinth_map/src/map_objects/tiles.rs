@@ -39,8 +39,8 @@ pub enum MoveType {
 impl MoveType {
     /// Convenience function for building a MoveType::Custom.
     /// Converts to lowercase.
-    pub fn custom(movtype: &str) -> MoveType {
-        let lcase = movtype.to_lowercase();
+    pub fn custom<T: Into<String>>(movtype: T) -> MoveType {
+        let lcase = movtype.into().to_lowercase();
 
         MoveType::Custom(lcase)
     }
@@ -71,10 +71,10 @@ impl MoveType {
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct Tile {
     /// The kind of tile it is.
-    pub kind: String,
+    kind: String,
 
     /// Whether or not the tile blocks vision.
-    pub opaque: bool,
+    opaque: bool,
 
     /// A hashset that defines the movement types that can enter the Tile.
     access: HashSet<MoveType>,
@@ -90,37 +90,59 @@ impl Tile {
     // Basic Tile constructors
 
     /// Explicit tile constructor
-    pub fn new(kind: &str, opaque: bool, access: HashSet<MoveType>) -> Tile {
+    pub fn new<T: Into<String>>(kind: T, opaque: bool, access: &[MoveType]) -> Tile {
+        let mut access_map = HashSet::new();
+
+        for movtype in access {
+            access_map.insert(movtype.to_owned());
+        }
+
         Tile {
-            kind: kind.to_lowercase(),
-            access,
+            kind: kind.into().to_lowercase(),
+            access: access_map,
             opaque,
         }
     }
 
     /// Direct constructor for a wall tile
     pub fn wall() -> Tile {
-        Tile::new("wall", true, set![])
+        Tile::new("wall", true, &[])
     }
 
     /// Direct constructor for a floor tile
     pub fn floor() -> Tile {
-        Tile::new("floor", false, set![MoveType::Walk, MoveType::Fly])
+        Tile::new("floor", false, &[MoveType::Walk, MoveType::Fly])
     }
 
     /// Quick constructor for a water tile
     pub fn water() -> Tile {
-        Tile::new("water", false, set![MoveType::Swim, MoveType::Fly])
+        Tile::new("water", false, &[MoveType::Swim, MoveType::Fly])
     }
 
     /// Direct constructor for a lava tile
     pub fn lava() -> Tile {
-        Tile::new("lava", false, set![MoveType::Fly])
+        Tile::new("lava", false, &[MoveType::Fly])
     }
 
     /// Direct constructor for a chasm tile
     pub fn chasm() -> Tile {
-        Tile::new("chasm", false, set![MoveType::Fly])
+        Tile::new("chasm", false, &[MoveType::Fly])
+    }
+
+    pub fn kind(&self) -> &String {
+        &self.kind
+    }
+
+    pub fn set_kind<T: Into<String>>(&mut self, kind: T) {
+        self.kind = kind.into().to_lowercase();
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        self.opaque
+    }
+
+    pub fn set_opacity(&mut self, opacity: bool) {
+        self.opaque = opacity;
     }
 
     /// Adds a custom movement property to the tile. Whether or not it can be
@@ -157,6 +179,89 @@ impl Tile {
     /// Returns the accessibility of a tile
     pub fn accessbility(&self) -> &HashSet<MoveType> {
         &self.access
+    }
+}
+
+pub struct TileBuilder {
+    kind: Option<String>,
+    opaque: Option<bool>,
+    access: Vec<MoveType>,
+}
+
+impl TileBuilder {
+    pub fn new() -> TileBuilder {
+        TileBuilder {
+            kind: None,
+            opaque: None,
+            access: vec![],
+        }
+    }
+
+    pub fn wall() -> TileBuilder {
+        TileBuilder {
+            kind: Some(String::from("wall")),
+            opaque: Some(true),
+            access: vec![],
+        }
+    }
+
+    pub fn floor() -> TileBuilder {
+        TileBuilder {
+            kind: Some(String::from("floor")),
+            opaque: Some(false),
+            access: vec![MoveType::Walk, MoveType::Fly],
+        }
+    }
+
+    pub fn water() -> TileBuilder {
+        TileBuilder {
+            kind: Some(String::from("water")),
+            opaque: Some(false),
+            access: vec![MoveType::Swim, MoveType::Fly],
+        }
+    }
+
+    pub fn lava() -> TileBuilder {
+        TileBuilder {
+            kind: Some(String::from("lava")),
+            opaque: Some(false),
+            access: vec![MoveType::Fly],
+        }
+    }
+
+    pub fn chasm() -> TileBuilder {
+        TileBuilder {
+            kind: Some(String::from("chasm")),
+            opaque: Some(false),
+            access: vec![MoveType::Fly],
+        }
+    }
+
+    pub fn with_kind<T: Into<String>>(mut self, kind: T) -> TileBuilder {
+        self.kind = Some(kind.into().to_lowercase());
+        self
+    }
+
+    pub fn with_opacity(mut self, opacity: bool) -> TileBuilder {
+        self.opaque = Some(opacity);
+        self
+    }
+
+    pub fn with_access(mut self, movtypes: &[MoveType]) -> TileBuilder {
+        self.access.extend_from_slice(movtypes);
+        self
+    }
+
+    pub fn build(mut self) -> Result<Tile, String> {
+        if self.opaque.is_none() && self.kind.is_none() {
+            return Err(String::from("Builder not fully initialized!"));
+        }
+
+        Ok(Tile::new(
+            &self.kind.unwrap(),
+            self.opaque.unwrap(),
+            &self.access,
+        ))
     }
 }
 
@@ -257,7 +362,7 @@ mod tests {
 
     #[test]
     fn tile_enterable_with_custom_movetype() {
-        let custom_tile = Tile::new("softwall", false, set![MoveType::custom("dig")]);
+        let custom_tile = Tile::new("softwall", false, &[MoveType::custom("dig")]);
 
         assert!(custom_tile.can_enter(&[MoveType::Custom("dig".to_string())]));
     }
@@ -277,5 +382,46 @@ mod tests {
         let res = custom_tile.can_enter(&[MoveType::Swim]);
 
         assert!(!res);
+    }
+
+    // TileBuilder tests
+    #[test]
+    #[should_panic]
+    fn builder_checks_initialization() {
+        TileBuilder::new().build().unwrap();
+    }
+
+    #[test]
+    fn builder_templates() -> Result<(), String> {
+        assert_eq!(Tile::wall(), TileBuilder::wall().build()?);
+        assert_eq!(Tile::floor(), TileBuilder::floor().build()?);
+        assert_eq!(Tile::water(), TileBuilder::water().build()?);
+        assert_eq!(Tile::lava(), TileBuilder::lava().build()?);
+        assert_eq!(Tile::chasm(), TileBuilder::chasm().build()?);
+        Ok(())
+    }
+
+    #[test]
+    fn tile_config_works() -> Result<(), String> {
+        let newtile: Tile = TileBuilder::new()
+            .with_kind("slime")
+            .with_opacity(false)
+            .with_access(&[
+                MoveType::Fly,
+                MoveType::Swim,
+                MoveType::Custom(String::from("liquidwalk")),
+            ])
+            .build()?;
+
+        assert_eq!(newtile.kind, String::from("slime"));
+        assert_eq!(newtile.opaque, false);
+
+        let mut expected_access = HashSet::new();
+        expected_access.insert(MoveType::Fly);
+        expected_access.insert(MoveType::Swim);
+        expected_access.insert(MoveType::Custom(String::from("liquidwalk")));
+
+        assert_eq!(newtile.accessbility(), &expected_access);
+        Ok(())
     }
 }

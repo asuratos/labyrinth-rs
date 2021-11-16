@@ -1,12 +1,15 @@
 use bracket_lib::prelude::*;
 use labyrinth_map::prelude::*;
 
+type LTile = labyrinth_map::prelude::Tile;
+
 enum TileType {
     Wall,
     Floor,
     Water,
     Lava,
     Chasm,
+    Custom(String),
 }
 
 struct State {
@@ -24,12 +27,13 @@ impl GameState for State {
         // TODO: put this in a function
         ctx.draw_hollow_box_double(51, 1, 28, 48, RGBA::named(WHITE), RGBA::new());
 
-        let tilename = match self.brush_state {
+        let tilename = match &self.brush_state {
             TileType::Wall => "wall",
             TileType::Floor => "floor",
             TileType::Water => "water",
             TileType::Lava => "lava",
             TileType::Chasm => "chasm",
+            TileType::Custom(str) => &str,
         };
 
         ctx.print(52, 2, format!("Click to set tile to {}", tilename));
@@ -66,6 +70,7 @@ fn process_character(gs: &mut State, c: char) {
         '3' => Some(TileType::Water),
         '4' => Some(TileType::Lava),
         '5' => Some(TileType::Chasm),
+        '6' => Some(TileType::Custom(String::from("phasing"))),
         'e' => {
             export(gs);
             None
@@ -105,13 +110,16 @@ fn try_paint_tile(gs: &mut State, ctx: &mut BTerm) {
 
     let loc = ctx.mouse_point();
 
-    match gs.brush_state {
-        TileType::Floor => gs.map.set_floor(loc),
-        TileType::Wall => gs.map.set_wall(loc),
-        TileType::Water => gs.map.set_water(loc),
-        TileType::Lava => gs.map.set_lava(loc),
-        TileType::Chasm => gs.map.set_chasm(loc),
-    }
+    let newtile = match &gs.brush_state {
+        TileType::Floor => LTile::floor(),
+        TileType::Wall => LTile::wall(),
+        TileType::Water => LTile::water(),
+        TileType::Lava => LTile::lava(),
+        TileType::Chasm => LTile::chasm(),
+        TileType::Custom(tilekind) => LTile::new(tilekind, true, &[]),
+    };
+
+    gs.map.set_tile_at(loc, newtile)
 }
 
 fn draw_map(map: &Labyrinth2D, ctx: &mut BTerm) {
