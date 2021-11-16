@@ -116,7 +116,7 @@ fn try_paint_tile(gs: &mut State, ctx: &mut BTerm) {
         TileType::Water => LTile::water(),
         TileType::Lava => LTile::lava(),
         TileType::Chasm => LTile::chasm(),
-        TileType::Custom(tilekind) => LTile::new(tilekind, true, &[]),
+        TileType::Custom(tilekind) => LTile::new(tilekind, true, []),
     };
 
     gs.map.set_tile_at(loc, newtile)

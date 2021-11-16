@@ -58,6 +58,8 @@ impl BaseMap for Labyrinth2D {
             Point::new(0, 1),
         ];
 
+        let filter: &[MoveType] = self._filter.as_slice();
+
         deltas
             .iter()
             // apply each delta to the point
@@ -67,7 +69,7 @@ impl BaseMap for Labyrinth2D {
             // map points -> vector indices
             .map(|pt| self.point2d_to_index(pt))
             // filter to only tiles that are walkable
-            .filter(|&pos| self.tiles[pos].can_enter(&self._filter))
+            .filter(|&pos| self.tiles[pos].can_enter(filter.to_owned()))
             // package into final struct
             // TODO: Make the cost variable (have can_enter return (bool, float)?)
             .map(|pos| (pos, 1.0))
@@ -164,7 +166,7 @@ impl Labyrinth2D {
     /// Checks if the tile at a given [`Point`] can be entered for an entity
     /// with the specified movement types.
     pub fn can_enter(&self, loc: Point, move_types: &[MoveType]) -> bool {
-        self.tile_at(loc).can_enter(move_types)
+        self.tile_at(loc).can_enter(move_types.to_vec())
     }
 
     pub fn get_neighbors(&mut self, loc: Point, move_types: &[MoveType]) -> Vec<Point> {

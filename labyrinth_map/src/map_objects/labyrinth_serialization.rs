@@ -256,7 +256,7 @@ mod tests {
         let phasewall = Tile::new(
             "phasewall",
             false,
-            &[MoveType::Custom(String::from("phase"))],
+            [MoveType::Custom(String::from("phase"))],
         );
         map_with_custom_movetype.set_tile_at(center, phasewall);
 
