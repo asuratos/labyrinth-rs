@@ -22,7 +22,7 @@ bracket-pathfinding = "*"
 
 [[example]]
 name = "pathfinding"
-required-features = ["serialization"]
+required-features = ["tools"]
 
 [[bin]]
 name = "editor"
