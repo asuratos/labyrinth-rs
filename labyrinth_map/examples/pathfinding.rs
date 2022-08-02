@@ -13,6 +13,7 @@ enum TileType {
 
 struct State {
     map: Labyrinth2D,
+    start: Point,
     movetypes: Vec<MoveType>,
 }
 
@@ -42,12 +43,56 @@ impl GameState for State {
                 _ => (),
             }
         }
+
+        // draw path from start -> mouse location
+        let mousepos = Point::from_tuple(input.mouse_tile_pos(0));
+
+        if mousepos.x < 50 {
+            // find path
+            let path = self
+                .map
+                .find_path(self.start, mousepos, self.movetypes.as_slice());
+
+            // println!("{:?} to {:?}: {:?}", self.start, mousepos, path.steps);
+
+            for tile in path.steps {
+                let tileaddress = self.map.index_to_point2d(tile);
+                println!("{:?}", tileaddress);
+                ctx.set(
+                    tileaddress.x,
+                    tileaddress.y,
+                    RGBA::named(WHITE),
+                    RGBA::named(YELLOW),
+                    to_cp437('X'),
+                )
+            }
+
+            // draw current mouse position
+            ctx.set(
+                mousepos.x,
+                mousepos.y,
+                RGBA::named(WHITE),
+                RGBA::named(YELLOW),
+                to_cp437('X'),
+            )
+        }
+    }
+}
+
+fn toggle_movetype(gs: &mut State, mov: MoveType) {
+    if gs.movetypes.contains(&mov) {
+        gs.movetypes.retain(|x| *x != mov);
+    } else {
+        gs.movetypes.push(mov);
     }
 }
 
 fn process_character(gs: &mut State, c: char) {
     // TODO: import and export map files/strings
     match c {
+        '1' => toggle_movetype(gs, MoveType::Walk),
+        '2' => toggle_movetype(gs, MoveType::Fly),
+        '3' => toggle_movetype(gs, MoveType::Swim),
         _ => {}
     }
 }
@@ -85,7 +130,8 @@ fn main() -> BError {
 
     let gs: State = State {
         map,
-        movetypes: vec![],
+        start: Point::new(5, 5),
+        movetypes: vec![MoveType::Walk],
     };
 
     main_loop(context, gs)

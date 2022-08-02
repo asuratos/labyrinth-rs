@@ -2,7 +2,7 @@
 name = "labyrinth_map"
 version = "0.1.0"
 authors = ["Aldrich Suratos <cyurio@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = ""
 license = "MIT OR Apache-2.0"
 
