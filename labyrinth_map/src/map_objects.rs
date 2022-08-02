@@ -167,7 +167,7 @@ impl Labyrinth2D {
         self.tile_at(loc).can_enter(move_types)
     }
 
-    /// Returns the neighbors of a [`Point`] on the [`Labyrinth2D`], 
+    /// Returns the neighbors of a [`Point`] on the [`Labyrinth2D`],
     /// given the usable move types. Takes a collection of [`MoveType`] that
     /// implements Into<Vec<Movetype>>
     pub fn get_neighbors<T>(&mut self, loc: Point, move_types: T) -> Vec<Point>
@@ -306,7 +306,7 @@ impl Labyrinth2D {
 
     // ----------------- Map Accessor Methods --------------
     // TODO: test these probably
-    /// Getter for the total size of the [`Labyrinth2D`], in total number of 
+    /// Getter for the total size of the [`Labyrinth2D`], in total number of
     /// tiles.
     pub fn size(&self) -> usize {
         self.tiles.len()
