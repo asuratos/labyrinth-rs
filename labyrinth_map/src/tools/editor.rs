@@ -43,6 +43,8 @@ impl GameState for State {
         ctx.print(52, 7, "3: Water");
         ctx.print(52, 8, "4: Lava");
         ctx.print(52, 9, "5: Chasm");
+        ctx.print(52, 20, "e: export map");
+        ctx.print(52, 21, "i: import map");
 
         draw_map(&self.map, ctx);
 

@@ -7,18 +7,6 @@ use serde::{Deserialize, Serialize};
 
 use std::collections::HashSet;
 
-macro_rules! set {
-    ( $( $x:expr ),* ) => {  // Match zero or more comma delimited items
-        {
-            let mut temp_set = HashSet::new();  // Create a mutable HashSet
-            $(
-                temp_set.insert($x); // Insert each item matched into the HashSet
-            )*
-            temp_set // Return the populated HashSet
-        }
-    };
-}
-
 /// Enum defining possible movement methods
 #[derive(PartialEq, Eq, Ord, PartialOrd, Hash, Debug, Clone)]
 #[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
@@ -315,6 +303,18 @@ impl TileBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    macro_rules! set {
+    ( $( $x:expr ),* ) => {  // Match zero or more comma delimited items
+        {
+            let mut temp_set = HashSet::new();  // Create a mutable HashSet
+            $(
+                temp_set.insert($x); // Insert each item matched into the HashSet
+            )*
+            temp_set // Return the populated HashSet
+        }
+    };
+}
 
     // Tile tests
     fn is_wall(tile: Tile) {

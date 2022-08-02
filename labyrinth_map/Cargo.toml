@@ -27,4 +27,4 @@ required-features = ["tools"]
 [[bin]]
 name = "editor"
 path = "src/tools/editor.rs"
-required-features = ["serialization"]
+required-features = ["tools"]
