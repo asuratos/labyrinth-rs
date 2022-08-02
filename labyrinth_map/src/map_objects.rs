@@ -14,7 +14,7 @@ pub use tiles::*;
 // TODO: Better Map struct documentation
 /// Labyrinth2D struct, the output of the MapGenerator2D.
 ///
-/// Implements Algorithm2D and BaseMap traits from bracket-pathfinding,
+/// Implements [`Algorithm2D`] and [`BaseMap`] traits from bracket-pathfinding,
 /// which allows for bracket-lib pathfinding algorithms.
 /// Also comes with built-in implementations for pathfinding for alternate
 /// movement methods (swim and fly).
@@ -167,6 +167,9 @@ impl Labyrinth2D {
         self.tile_at(loc).can_enter(move_types)
     }
 
+    /// Returns the neighbors of a [`Point`] on the [`Labyrinth2D`], 
+    /// given the usable move types. Takes a collection of [`MoveType`] that
+    /// implements Into<Vec<Movetype>>
     pub fn get_neighbors<T>(&mut self, loc: Point, move_types: T) -> Vec<Point>
     where
         T: Into<Vec<MoveType>>,
@@ -303,33 +306,40 @@ impl Labyrinth2D {
 
     // ----------------- Map Accessor Methods --------------
     // TODO: test these probably
+    /// Getter for the total size of the [`Labyrinth2D`], in total number of 
+    /// tiles.
     pub fn size(&self) -> usize {
         self.tiles.len()
     }
 
+    /// Getter for a vector of the tiles within the [`Labyrinth2D`]
     pub fn tiles(&self) -> &Vec<Tile> {
         &self.tiles
     }
 
+    /// Gets an immutable iterator of all tiles in the [`Labyrinth2D`]
     pub fn iter(&self) -> core::slice::Iter<Tile> {
         self.tiles.iter()
     }
 
+    /// Gets a mutable iterator of all tiles in the [`Labyrinth2D`]
     pub fn iter_mut(&mut self) -> core::slice::IterMut<Tile> {
         self.tiles.iter_mut()
     }
 
-    // TODO: Rows struct as chunks
+    /// Gets an immutable iterator over the rows of the [`Labyrinth2D`]
     pub fn rows(&self) -> Rows<Tile> {
         Rows(self.tiles.chunks(self.dimensions().x as usize))
     }
 
+    /// Gets a mutable iterator over the rows of the [`Labyrinth2D`]
     pub fn rows_mut(&mut self) -> RowsMut<Tile> {
         let width = self.dimensions().x as usize;
         RowsMut(self.tiles.chunks_mut(width))
     }
 }
 
+/// Iterator over the rows of a [`Labyrinth2D`]
 pub struct Rows<'a, T>(std::slice::Chunks<'a, T>);
 
 impl<'a, T> Iterator for Rows<'a, T> {
@@ -340,6 +350,7 @@ impl<'a, T> Iterator for Rows<'a, T> {
     }
 }
 
+/// Mutable Iterator over the rows of a [`Labyrinth2D`]
 pub struct RowsMut<'a, T>(std::slice::ChunksMut<'a, T>);
 
 impl<'a, T> Iterator for RowsMut<'a, T> {
@@ -349,6 +360,7 @@ impl<'a, T> Iterator for RowsMut<'a, T> {
         self.0.next()
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
