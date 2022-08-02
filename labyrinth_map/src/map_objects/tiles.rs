@@ -136,10 +136,12 @@ impl Tile {
         Tile::new("chasm", false, [MoveType::Fly])
     }
 
+    /// Getter for the Tile kind
     pub fn kind(&self) -> &String {
         &self.kind
     }
 
+    /// Setter for the Tile kind
     pub fn set_kind<T>(&mut self, kind: T)
     where
         T: Into<String>,
@@ -147,10 +149,12 @@ impl Tile {
         self.kind = kind.into().to_lowercase();
     }
 
+    /// Getter for Tile opaque bool
     pub fn is_opaque(&self) -> bool {
         self.opaque
     }
 
+    /// Setter for Tile opacity
     pub fn set_opacity(&mut self, opacity: bool) {
         self.opaque = opacity;
     }
@@ -165,6 +169,8 @@ impl Tile {
         }
     }
 
+    /// Add movement properties. Takes any collection of MoveTypes that
+    /// implements IntoIterator
     pub fn add_movetypes<T>(&mut self, movtypes: T)
     where
         T: IntoIterator<Item = MoveType>,
@@ -207,6 +213,7 @@ impl Tile {
     }
 }
 
+/// Builder Struct for Tiles
 pub struct TileBuilder {
     kind: Option<String>,
     opaque: Option<bool>,
@@ -214,6 +221,7 @@ pub struct TileBuilder {
 }
 
 impl TileBuilder {
+    /// Fresh constructor for TileBuilder
     pub fn new() -> TileBuilder {
         TileBuilder {
             kind: None,
@@ -222,6 +230,7 @@ impl TileBuilder {
         }
     }
 
+    /// Wall Template constructor for TileBuilder
     pub fn wall() -> TileBuilder {
         TileBuilder {
             kind: Some(String::from("wall")),
@@ -230,6 +239,7 @@ impl TileBuilder {
         }
     }
 
+    /// Floor Template constructor for TileBuilder
     pub fn floor() -> TileBuilder {
         TileBuilder {
             kind: Some(String::from("floor")),
@@ -238,6 +248,7 @@ impl TileBuilder {
         }
     }
 
+    /// Water Template constructor for TileBuilder
     pub fn water() -> TileBuilder {
         TileBuilder {
             kind: Some(String::from("water")),
@@ -246,6 +257,7 @@ impl TileBuilder {
         }
     }
 
+    /// Lava Template constructor for TileBuilder
     pub fn lava() -> TileBuilder {
         TileBuilder {
             kind: Some(String::from("lava")),
@@ -254,6 +266,7 @@ impl TileBuilder {
         }
     }
 
+    /// Chasm Template constructor for TileBuilder
     pub fn chasm() -> TileBuilder {
         TileBuilder {
             kind: Some(String::from("chasm")),
@@ -262,6 +275,7 @@ impl TileBuilder {
         }
     }
 
+    /// Method for setting Kind of a TileBuilder
     pub fn with_kind<T>(mut self, kind: T) -> TileBuilder
     where
         T: Into<String>,
@@ -270,17 +284,21 @@ impl TileBuilder {
         self
     }
 
+    /// Method for setting Opacity of a TileBuilder
     pub fn with_opacity(mut self, opacity: bool) -> TileBuilder {
         self.opaque = Some(opacity);
         self
     }
 
+    /// Method for setting Access properties for a TileBuilder
     pub fn with_access(mut self, movtypes: &[MoveType]) -> TileBuilder {
+        // TODO: Consider making this generic over slices?
         self.access.extend_from_slice(movtypes);
         self
     }
 
-    //TODO: Builder Error?
+    /// Terminal method for TileBuilder. Returns a Result with either the Tile
+    /// or an error.
     pub fn build(self) -> Result<Tile, String> {
         if self.opaque.is_none() && self.kind.is_none() {
             return Err(String::from("Builder not fully initialized!"));
