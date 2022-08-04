@@ -34,6 +34,7 @@ pub enum FloorGenAlg {
 /// ```
 pub struct MapGenerator2D {
     map: Labyrinth2D,
+    rooms: Vec<Box<dyn genalgs::rooms::Room>>,
     dimensions: Point,
 }
 
@@ -43,6 +44,7 @@ impl MapGenerator2D {
     pub fn new(width: usize, height: usize) -> MapGenerator2D {
         MapGenerator2D {
             map: Labyrinth2D::new(width, height),
+            rooms: vec![],
             dimensions: Point::new(width, height),
         }
     }

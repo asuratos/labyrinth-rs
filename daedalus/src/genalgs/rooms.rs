@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use super::shapes;
 
-trait Room {
+pub trait Room {
     fn floor(&self) -> HashSet<Point>;
     fn borders(&self) -> HashSet<Point>;
     fn points(&self) -> HashSet<Point>;
