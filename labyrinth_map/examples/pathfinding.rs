@@ -3,14 +3,6 @@ use labyrinth_map::prelude::*;
 
 static MAP: &str = include_str!("pathfinding_map.ron");
 
-enum TileType {
-    Wall,
-    Floor,
-    Water,
-    Lava,
-    Chasm,
-}
-
 struct State {
     map: Labyrinth2D,
     start: Point,
@@ -23,14 +15,7 @@ impl GameState for State {
         ctx.cls();
 
         // draw panel
-        // TODO: put this in a function
-        ctx.draw_hollow_box_double(51, 1, 28, 48, RGBA::named(WHITE), RGBA::new());
-
-        ctx.print(52, 4, "Move Types:");
-        ctx.print(52, 5, "1: Walk");
-        ctx.print(52, 6, "2: Fly");
-        ctx.print(52, 7, "3: Swim");
-
+        draw_panel(self, ctx);
         draw_map(&self.map, ctx);
 
         // process user input
@@ -57,7 +42,7 @@ impl GameState for State {
 
             for tile in path.steps {
                 let tileaddress = self.map.index_to_point2d(tile);
-                println!("{:?}", tileaddress);
+                // println!("{:?}", tileaddress);
                 ctx.set(
                     tileaddress.x,
                     tileaddress.y,
@@ -97,6 +82,48 @@ fn process_character(gs: &mut State, c: char) {
     }
 }
 
+fn draw_panel(gs: &mut State, ctx: &mut BTerm) {
+    ctx.draw_hollow_box_double(51, 1, 28, 48, RGBA::named(WHITE), RGBA::new());
+
+    ctx.print(52, 4, "Move Types:");
+    // ctx.print(52, 5, "1: Walk");
+    ctx.print_color(
+        52,
+        5,
+        if gs.movetypes.contains(&MoveType::Walk) || gs.movetypes.is_empty() {
+            RGBA::named(BLUE)
+        } else {
+            RGBA::named(WHITE)
+        },
+        RGBA::named(BLACK),
+        "1: Walk",
+    );
+    // ctx.print(52, 6, "2: Fly");
+    ctx.print_color(
+        52,
+        6,
+        if gs.movetypes.contains(&MoveType::Fly) {
+            RGBA::named(BLUE)
+        } else {
+            RGBA::named(WHITE)
+        },
+        RGBA::named(BLACK),
+        "2: Fly",
+    );
+    // ctx.print(52, 7, "3: Swim");
+    ctx.print_color(
+        52,
+        7,
+        if gs.movetypes.contains(&MoveType::Swim) {
+            RGBA::named(BLUE)
+        } else {
+            RGBA::named(WHITE)
+        },
+        RGBA::named(BLACK),
+        "3: Swim",
+    );
+}
+
 fn draw_map(map: &Labyrinth2D, ctx: &mut BTerm) {
     (0..map.size()).for_each(|idx| {
         let pt = map.index_to_point2d(idx);
@@ -109,7 +136,7 @@ fn draw_tile(pt: Point, kind: &str, ctx: &mut BTerm) {
     let y = pt.y;
     let (glyph, fg, bg) = match kind {
         "wall" => ('#', RGBA::named(WHITE), RGBA::named(BLACK)),
-        "floor" => ('.', RGBA::named(GRAY), RGBA::named(BLACK)),
+        "floor" => (' ', RGBA::named(GRAY), RGBA::named(BLACK)),
         "water" => ('~', RGBA::named(LIGHT_BLUE), RGBA::named(BLUE)),
         "lava" => ('~', RGBA::named(ORANGE), RGBA::named(YELLOW)),
         "chasm" => (' ', RGBA::named(BLACK), RGBA::named(DARK_BLUE)),
@@ -122,6 +149,7 @@ fn draw_tile(pt: Point, kind: &str, ctx: &mut BTerm) {
 fn main() -> BError {
     let context = BTermBuilder::simple80x50()
         .with_title("Basic Map Editor (50x50)")
+        .with_tile_dimensions(16, 16)
         .with_advanced_input(true)
         .build()?;
 
