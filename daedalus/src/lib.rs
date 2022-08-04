@@ -12,6 +12,7 @@ use labyrinth_map;
 
 mod errors;
 
+mod genalgs;
 mod map_generators;
 
 pub mod prelude {
