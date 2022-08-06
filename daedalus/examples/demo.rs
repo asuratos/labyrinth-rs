@@ -30,7 +30,7 @@ impl GameState for State {
 fn process_character(gs: &mut State, c: char) {
     // TODO: this should call different actions on the mapbuilder, allowing
     //       for a demo of each of the main methods in it
-    println!("{:?}", c);
+    // println!("{:?}", c);
     match c {
         'n' => gs.mapbuilder.flush_map(),
         'w' => gs.mapbuilder.walled_map(),

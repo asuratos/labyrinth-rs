@@ -37,7 +37,7 @@ struct RectRoom {
 }
 
 impl RectRoom {
-    fn new(w: i32, h: i32) -> RectRoom {
+    pub fn new(w: i32, h: i32) -> RectRoom {
         // TODO: add checks to make sure w, h are > 0
         RectRoom {
             internal: Rect::with_size(0, 0, w, h),
@@ -100,11 +100,11 @@ impl Room for RectRoom {
 
     fn shift(&mut self, offset: Point) {
         let old = self.internal;
-        self.internal = Rect::with_exact(
+        self.internal = Rect::with_size(
             old.x1 + offset.x,
             old.y1 + offset.y,
-            old.x2 + offset.x,
-            old.y2 + offset.y,
+            old.width(),
+            old.height(),
         );
     }
 }
@@ -118,7 +118,7 @@ struct Hall {
 }
 
 impl Hall {
-    fn new_horizontal(length: i32, thickness: i32) -> Hall {
+    pub fn new_horizontal(length: i32, thickness: i32) -> Hall {
         Hall {
             start: Point::new(0, 0),
             horizontal: true,
@@ -127,7 +127,7 @@ impl Hall {
         }
     }
 
-    fn new_vertical(length: i32, thickness: i32) -> Hall {
+    pub fn new_vertical(length: i32, thickness: i32) -> Hall {
         Hall {
             start: Point::new(0, 0),
             horizontal: false,
@@ -135,30 +135,79 @@ impl Hall {
             thickness,
         }
     }
-}
 
-impl RoomCollisions for Hall {}
-
-impl Room for Hall {
-    fn floor(&self) -> HashSet<Point> {
+    fn endpoint(&self) -> Point {
         let d: Point = if self.horizontal {
             Point::new(0, self.length)
         } else {
             Point::new(self.length, 0)
         };
 
-        let end = self.start + d;
+        self.start + d
+    }
+}
+
+impl RoomCollisions for Hall {}
+
+impl Room for Hall {
+    fn floor(&self) -> HashSet<Point> {
+        let end = self.endpoint();
 
         HashSet::from_iter(line2d_bresenham(self.start, end).iter().cloned())
-        // TODO: add thickness
-    }
-
-    fn borders(&self) -> HashSet<Point> {
-        todo!()
     }
 
     fn walls(&self) -> HashSet<Point> {
-        todo!()
+        let end = self.endpoint();
+        let side_wall_starts: [Point; 2];
+        let start_wall: Point;
+        let end_wall: Point;
+
+        if self.horizontal {
+            side_wall_starts = [Point::new(0, 1), Point::new(0, -1)];
+            if self.length < 0 {
+                start_wall = Point::new(1, 0);
+                end_wall = Point::new(-1, 0);
+            } else {
+                start_wall = Point::new(-1, 0);
+                end_wall = Point::new(1, 0);
+            }
+        } else {
+            side_wall_starts = [Point::new(1, 0), Point::new(-1, 0)];
+            if self.length < 0 {
+                start_wall = Point::new(0, 1);
+                end_wall = Point::new(0, -1);
+            } else {
+                start_wall = Point::new(0, -1);
+                end_wall = Point::new(0, 1);
+            }
+        };
+
+        let mut walls = HashSet::new();
+        for d in side_wall_starts {
+            walls.extend(line2d_bresenham(self.start + d, end + d).iter())
+        }
+        walls.insert(self.start + start_wall);
+        walls.insert(end + end_wall);
+        walls
+    }
+
+    fn borders(&self) -> HashSet<Point> {
+        let mut borders = self.walls();
+
+        let diagonals = [
+            Point::new(1, 1),
+            Point::new(1, -1),
+            Point::new(-1, 1),
+            Point::new(-1, -1),
+        ];
+
+        for pt in [self.start, self.endpoint()] {
+            for d in diagonals {
+                borders.insert(pt + d);
+            }
+        }
+
+        borders
     }
 
     fn shift(&mut self, offset: Point) {
@@ -168,8 +217,6 @@ impl Room for Hall {
 
 #[cfg(test)]
 mod tests {
-    use crate::genalgs::rooms::RoomCollisions;
-
     use super::{RectRoom, Room};
 
     fn rectroom_is_valid(rm: &RectRoom) {
