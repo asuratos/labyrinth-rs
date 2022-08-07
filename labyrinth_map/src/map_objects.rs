@@ -187,6 +187,7 @@ impl Labyrinth2D {
     /// Find the path between two [`Points`](Point) for an entity with multiple
     /// movement types.
     // TODO: Examples here
+    // TODO: Try a version of this that doesn't require mutable access?
     pub fn find_path<T>(&mut self, start: Point, end: Point, move_types: T) -> NavigationPath
     where
         T: Into<Vec<MoveType>>,

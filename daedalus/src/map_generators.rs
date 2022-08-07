@@ -64,7 +64,7 @@ impl MapGenerator2D {
         // Figure out the correct way to build the map
         match method {
             FloorGenAlg::Basic => {
-                genalgs::build_rooms_and_corridors(&mut self.map);
+                genalgs::build_rooms_and_corridors(self);
             }
             _ => {
                 return Err(BuilderError::BuildError(format!(
