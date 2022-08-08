@@ -1,10 +1,12 @@
 use bracket_pathfinding::prelude::{Algorithm2D, Point};
 use labyrinth_map::prelude::Labyrinth2D;
+use std::collections::HashSet;
 
 use crate::map_generators::MapGenerator2D;
 use labyrinth_map::prelude::MoveType;
 
 pub mod rooms;
+use rooms::*;
 mod shapes;
 
 fn is_fully_connected(map: &mut Labyrinth2D) -> bool {
@@ -39,11 +41,27 @@ fn is_fully_connected(map: &mut Labyrinth2D) -> bool {
     true
 }
 
+fn attach_room() -> CompoundRoom {
+    CompoundRoom {
+        rooms: vec![],
+        connections: HashSet::new(),
+    }
+}
+
 pub fn build_rooms_and_corridors(map: &mut MapGenerator2D) {
     // generate n rooms
     let n = 20;
+
+    // start with a small rectangle
+    let mut firstroom = RectRoom::new(5, 5);
+    firstroom.shift((map.map().dimensions() / 2) - Point::new(2, 2));
+
+    let mut rooms = vec![firstroom];
+
     for _ in 0..n {
         // generate a rectangle room and a corridor
+        let mut newroom = RectRoom::new(3, 3);
+        let mut newhall = Hall::new_horizontal(1, 1);
         // try to attach each room to the map
     }
 

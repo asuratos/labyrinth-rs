@@ -43,7 +43,7 @@ pub trait RoomCollisions: Room {
 }
 
 #[derive(Debug, PartialEq)]
-struct RectRoom {
+pub struct RectRoom {
     internal: Rect,
 }
 
@@ -120,7 +120,7 @@ impl Room for RectRoom {
 }
 
 #[derive(Debug, PartialEq)]
-struct Hall {
+pub struct Hall {
     start: Point,
     horizontal: bool,
     length: i32,
@@ -250,17 +250,29 @@ impl Room for Hall {
 }
 
 #[derive(Debug, PartialEq)]
-struct CompoundRoom {
-    rooms: Vec<Box<dyn Room>>,
-    connections: HashSet<Point>,
+pub struct CompoundRoom {
+    pub rooms: Vec<Box<dyn Room>>,
+    pub connections: HashSet<Point>,
+}
+
+impl CompoundRoom {
+    pub fn from_room<T: Room + 'static>(room: T) -> CompoundRoom {
+        CompoundRoom {
+            rooms: vec![Box::new(room)],
+            connections: HashSet::new(),
+        }
+    }
 }
 
 impl Room for CompoundRoom {
     fn floor(&self) -> HashSet<Point> {
-        self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
+        let mut floor = self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
             acc.extend(room.floor());
             acc
-        })
+        });
+
+        floor.extend(self.connections.iter());
+        floor
     }
 
     fn borders(&self) -> HashSet<Point> {
