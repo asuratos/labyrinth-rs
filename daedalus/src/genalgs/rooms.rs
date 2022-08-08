@@ -20,9 +20,9 @@ pub trait Room {
     }
 
     fn shift(&mut self, offset: Point);
-    fn rotate_left(&mut self) {}
-    fn rotate_right(&mut self) {}
-    fn mirror(&mut self) {}
+    fn rotate_left(&mut self) ;
+    fn rotate_right(&mut self) ;
+    fn mirror(&mut self) ;
 }
 
 pub trait RoomCollisions: Room {
@@ -83,9 +83,8 @@ impl Room for RectRoom {
     }
 
     fn mirror(&mut self) {
-        // do nothing to the internals
-
-        // mirror attached hallways?
+        let old = self.internal;
+        self.internal = Rect::with_exact(-old.x2, old.y1, -old.x1, old.y2);
     }
 
     fn rotate_left(&mut self) {
@@ -210,8 +209,32 @@ impl Room for Hall {
         borders
     }
 
+    fn mirror(&mut self) {
+        self.start.x *=- 1;
+    }
+
     fn shift(&mut self, offset: Point) {
         self.start += offset;
+    }
+
+    fn rotate_right(&mut self) {
+        self.start = Point::new(-self.start.y, self.start.x);
+        if self.horizontal {
+            self.horizontal = false;
+        } else {
+            self.horizontal = true;
+            self.length *= -1;
+        }
+    }
+
+    fn rotate_left(&mut self) {
+        self.start = Point::new(self.start.y, -self.start.x);
+        if self.horizontal {
+            self.horizontal = false;
+            self.length *= -1;
+        } else {
+            self.horizontal = true;
+        }
     }
 }
 
