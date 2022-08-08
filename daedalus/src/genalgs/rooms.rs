@@ -20,9 +20,9 @@ pub trait Room {
     }
 
     fn shift(&mut self, offset: Point);
-    fn rotate_left(&mut self) ;
-    fn rotate_right(&mut self) ;
-    fn mirror(&mut self) ;
+    fn rotate_left(&mut self);
+    fn rotate_right(&mut self);
+    fn mirror(&mut self);
 }
 
 pub trait RoomCollisions: Room {
@@ -210,7 +210,7 @@ impl Room for Hall {
     }
 
     fn mirror(&mut self) {
-        self.start.x *=- 1;
+        self.start.x *= -1;
     }
 
     fn shift(&mut self, offset: Point) {
