@@ -9,11 +9,13 @@ mod shapes;
 
 fn is_fully_connected(map: &mut Labyrinth2D) -> bool {
     // TODO: Make this work for different kinds of move types?
+    let movtype = MoveType::Walk;
+
     // get a set of walkable tiles
     let mut walkable: Vec<Point> = map
         .iter()
         .enumerate()
-        .filter(|(_, tile)| tile.access().contains(&MoveType::Walk))
+        .filter(|(_, tile)| tile.can_enter(&[movtype.clone()]))
         .map(|(i, _)| map.index_to_point2d(i))
         .collect();
 
@@ -22,12 +24,12 @@ fn is_fully_connected(map: &mut Labyrinth2D) -> bool {
     // get the last walkable point
     if let Some(pt) = walkable.pop() {
         // try to find a path to every other point from that one.
-        for target in walkable {
-            let path = map.find_path(pt, target, [MoveType::Walk]);
 
-            if !path.success {
-                return false;
-            }
+        if walkable
+            .iter()
+            .any(|&end| !map.find_path(pt, end, [movtype.clone()]).success)
+        {
+            return false;
         }
     } else {
         // Trivial case: if there are no walkable tiles at all
