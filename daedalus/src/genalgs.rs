@@ -41,18 +41,17 @@ fn is_fully_connected(map: &mut Labyrinth2D) -> bool {
     true
 }
 
-fn attach_room() -> CompoundRoom {
-    CompoundRoom {
-        rooms: vec![],
-        connections: HashSet::new(),
-    }
+fn attach_room<T: Room>(r1: CompoundRoom, r2: T) -> CompoundRoom {
+    let possible_entrances = r1.walls();
+
+    r1
 }
 
 pub fn build_rooms_and_corridors(map: &mut MapGenerator2D) {
     // generate n rooms
     let n = 20;
 
-    // start with a small rectangle
+    // start with a central small rectangle
     let mut firstroom = RectRoom::new(5, 5);
     firstroom.shift((map.map().dimensions() / 2) - Point::new(2, 2));
 

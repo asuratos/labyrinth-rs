@@ -8,6 +8,8 @@ pub trait Room {
     fn floor(&self) -> HashSet<Point>;
     fn walls(&self) -> HashSet<Point>;
     fn borders(&self) -> HashSet<Point>;
+    // TODO: add possible door locations
+    // fn entries(&self) -> HashSet<Point>;
 
     fn all_points(&self) -> HashSet<Point> {
         let mut all = self.floor();
