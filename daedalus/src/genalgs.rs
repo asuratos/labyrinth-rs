@@ -44,6 +44,8 @@ fn is_fully_connected(map: &mut Labyrinth2D) -> bool {
 fn attach_room<T: Room>(r1: CompoundRoom, r2: T) -> CompoundRoom {
     let possible_entrances = r1.walls();
 
+    let possible_attachments = r2.walls(); //or entry points?
+
     r1
 }
 

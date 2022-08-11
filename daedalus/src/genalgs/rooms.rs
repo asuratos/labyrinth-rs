@@ -40,7 +40,7 @@ impl PartialEq for dyn Room {
 }
 pub trait RoomCollisions: Room {
     fn collides_with<T: Room>(&self, other: &T) -> bool {
-        !self.all_points().is_disjoint(&other.all_points())
+        !self.floor().is_disjoint(&other.floor())
     }
 }
 
