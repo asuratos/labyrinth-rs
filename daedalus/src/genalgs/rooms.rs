@@ -40,7 +40,10 @@ impl PartialEq for dyn Room {
 }
 pub trait RoomCollisions: Room {
     fn collides_with<T: Room>(&self, other: &T) -> bool {
-        !self.floor().is_disjoint(&other.floor())
+        // Two rooms are disjoint if their borders do not touch the floor of
+        // the other room.
+        !(self.floor().is_disjoint(&other.all_points())
+            && self.all_points().is_disjoint(&other.floor()))
     }
 }
 
@@ -126,7 +129,7 @@ pub struct Hall {
     start: Point,
     horizontal: bool,
     length: i32,
-    thickness: i32,
+    thickness: i32, // TODO: Thickness doesn't do anything atm
 }
 
 impl Hall {
