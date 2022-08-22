@@ -9,7 +9,7 @@ pub trait Room {
     fn walls(&self) -> HashSet<Point>;
     fn borders(&self) -> HashSet<Point>;
     // TODO: add possible door locations
-    // fn entries(&self) -> HashSet<Point>;
+    fn entries(&self) -> HashSet<Point>;
 
     fn all_points(&self) -> HashSet<Point> {
         let mut all = self.floor();
@@ -96,6 +96,23 @@ impl Room for RectRoom {
         }
 
         border
+    }
+
+    fn entries(&self) -> HashSet<Point> {
+        // TODO: Randomize
+
+        // for now just get the center walls
+        HashSet::from_iter(
+            self.walls()
+                .iter()
+                .filter(|&pt| {
+                    pt.x == self.internal.center().x
+                        || pt.x == self.internal.center().y
+                        || pt.y == self.internal.center().x
+                        || pt.y == self.internal.center().y
+                })
+                .cloned(),
+        )
     }
 
     fn mirror(&mut self) {
@@ -225,6 +242,20 @@ impl Room for Hall {
         borders
     }
 
+    fn entries(&self) -> HashSet<Point> {
+        let mut entries = HashSet::new();
+        let multiplier = if self.length <= 0 { -1 } else { 1 };
+        if self.horizontal {
+            entries.insert(self.start + Point::new(-multiplier, 0));
+            entries.insert(self.endpoint() + Point::new(multiplier, 0));
+        } else {
+            entries.insert(self.start + Point::new(0, -multiplier));
+            entries.insert(self.endpoint() + Point::new(0, multiplier));
+        }
+
+        entries
+    }
+
     fn mirror(&mut self) {
         self.start.x *= -1;
     }
@@ -300,6 +331,13 @@ impl Room for CompoundRoom {
     fn walls(&self) -> HashSet<Point> {
         self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
             acc.extend(room.walls());
+            acc
+        })
+    }
+
+    fn entries(&self) -> HashSet<Point> {
+        self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
+            acc.extend(room.entries());
             acc
         })
     }
