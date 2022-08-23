@@ -4,6 +4,9 @@ use std::{collections::HashSet, iter::FromIterator};
 
 use super::shapes;
 
+pub mod compound_room;
+pub use compound_room::*;
+
 pub trait Room {
     fn floor(&self) -> HashSet<Point>;
     fn walls(&self) -> HashSet<Point>;
@@ -282,84 +285,6 @@ impl Room for Hall {
         } else {
             self.horizontal = true;
         }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct CompoundRoom {
-    pub rooms: Vec<Box<dyn Room>>,
-    pub connections: HashSet<Point>,
-}
-
-impl CompoundRoom {
-    pub fn from_room<T: Room + 'static>(room: T) -> CompoundRoom {
-        CompoundRoom {
-            rooms: vec![Box::new(room)],
-            connections: HashSet::new(),
-        }
-    }
-}
-
-impl Room for CompoundRoom {
-    fn floor(&self) -> HashSet<Point> {
-        let mut floor = self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
-            acc.extend(room.floor());
-            acc
-        });
-
-        floor.extend(self.connections.iter());
-        floor
-    }
-
-    fn borders(&self) -> HashSet<Point> {
-        let floor = self.floor();
-        let borders = self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
-            acc.extend(room.borders());
-            acc
-        });
-
-        borders.difference(&floor).cloned().collect()
-    }
-
-    fn all_points(&self) -> HashSet<Point> {
-        self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
-            acc.extend(room.all_points());
-            acc
-        })
-    }
-
-    fn walls(&self) -> HashSet<Point> {
-        self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
-            acc.extend(room.walls());
-            acc
-        })
-    }
-
-    fn entries(&self) -> HashSet<Point> {
-        self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
-            acc.extend(room.entries());
-            acc
-        })
-    }
-
-    fn point_in_room(&self, pt: Point) -> bool {
-        self.rooms.iter().any(|r| r.point_in_room(pt))
-    }
-
-    fn mirror(&mut self) {
-        self.rooms.iter_mut().for_each(|r| r.mirror());
-    }
-
-    fn rotate_left(&mut self) {
-        self.rooms.iter_mut().for_each(|r| r.rotate_left());
-    }
-
-    fn rotate_right(&mut self) {
-        self.rooms.iter_mut().for_each(|r| r.rotate_right());
-    }
-
-    fn shift(&mut self, offset: Point) {
-        self.rooms.iter_mut().for_each(|r| r.shift(offset));
     }
 }
 

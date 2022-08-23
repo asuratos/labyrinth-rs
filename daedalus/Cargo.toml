@@ -2,7 +2,7 @@
 name = "daedalus"
 version = "0.1.0"
 authors = ["Aldrich Suratos <cyurio@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "A crate for roguelike-style map generation."
 license = "MIT OR Apache-2.0"
 
@@ -17,6 +17,7 @@ labyrinth_map = {path = "../labyrinth_map"}
 serde = {version = "*", features = ["derive"]}
 bracket-geometry = {version = "*", features = ["serde"]}
 bracket-pathfinding = "*"
+rand = "*"
 
 [dev-dependencies]
 bracket-terminal = "*"

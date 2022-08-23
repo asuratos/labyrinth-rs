@@ -7,6 +7,7 @@ use labyrinth_map::prelude::MoveType;
 
 pub mod rooms;
 use rooms::*;
+
 mod shapes;
 
 fn is_fully_connected(map: &mut Labyrinth2D) -> bool {
@@ -41,14 +42,6 @@ fn is_fully_connected(map: &mut Labyrinth2D) -> bool {
     true
 }
 
-fn attach_room<T: Room>(r1: CompoundRoom, r2: T) -> CompoundRoom {
-    let possible_entrances = r1.walls();
-
-    let possible_attachments = r2.walls(); //or entry points?
-
-    r1
-}
-
 pub fn build_rooms_and_corridors(map: &mut MapGenerator2D) {
     // generate n rooms
     let n = 20;
@@ -57,7 +50,7 @@ pub fn build_rooms_and_corridors(map: &mut MapGenerator2D) {
     let mut firstroom = RectRoom::new(5, 5);
     firstroom.shift((map.map().dimensions() / 2) - Point::new(2, 2));
 
-    let mut rooms = vec![firstroom];
+    let mut rooms = CompoundRoom::from_room(firstroom);
 
     for _ in 0..n {
         // generate a rectangle room and a corridor
