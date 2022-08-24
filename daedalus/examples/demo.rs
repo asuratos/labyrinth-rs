@@ -63,16 +63,34 @@ fn draw_panel(ctx: &mut BTerm) {
 
 fn draw_debug(mapgen: &MapGenerator2D, ctx: &mut BTerm) {
     for pt in mapgen.rooms().borders() {
-        ctx.set(pt.x, pt.y, RGBA::named(WHITE), RGBA::named(RED), to_cp437(' '));
+        ctx.set(
+            pt.x,
+            pt.y,
+            RGBA::named(WHITE),
+            RGBA::named(RED),
+            to_cp437(' '),
+        );
     }
     for pt in mapgen.rooms().walls() {
-        ctx.set(pt.x, pt.y, RGBA::named(WHITE), RGBA::named(BLUE), to_cp437(' '));
+        ctx.set(
+            pt.x,
+            pt.y,
+            RGBA::named(WHITE),
+            RGBA::named(BLUE),
+            to_cp437(' '),
+        );
     }
 }
 
 fn draw_doors(mapgen: &MapGenerator2D, ctx: &mut BTerm) {
     for pt in mapgen.connections().iter() {
-        ctx.set(pt.x, pt.y, RGBA::named(WHITE), RGBA::named(BURLYWOOD), to_cp437('+'));
+        ctx.set(
+            pt.x,
+            pt.y,
+            RGBA::named(WHITE),
+            RGBA::named(BURLYWOOD),
+            to_cp437('+'),
+        );
     }
 }
 

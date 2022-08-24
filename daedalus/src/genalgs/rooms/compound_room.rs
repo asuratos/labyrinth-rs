@@ -22,7 +22,7 @@ impl CompoundRoom {
         }
     }
 
-    pub fn find_and_attach_room<T: RoomCollisions + 'static>(&mut self, room: T) -> bool{
+    pub fn find_and_attach_room<T: RoomCollisions + 'static>(&mut self, room: T) -> bool {
         if let Some((room, conn)) = self.find_valid_attachment(room) {
             self.attach_room(room, conn);
             return true;
