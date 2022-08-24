@@ -17,6 +17,7 @@ mod map_generators;
 
 pub mod prelude {
     //! Re-exported important objects (public API)
+    pub use crate::genalgs::rooms::*;
     pub use crate::map_generators::*;
     pub use labyrinth_map::prelude::*;
 }

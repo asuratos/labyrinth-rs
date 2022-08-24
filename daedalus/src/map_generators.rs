@@ -2,10 +2,13 @@
 
 // use std::collections::HashMap;
 
+use std::collections::HashSet;
+
 use bracket_geometry::prelude::*;
-// use bracket_pathfinding::prelude::*;
+use bracket_pathfinding::prelude::*;
 
 use crate::genalgs;
+use genalgs::rooms::*;
 
 use super::errors::BuilderError;
 
@@ -34,8 +37,9 @@ pub enum FloorGenAlg {
 /// ```
 pub struct MapGenerator2D {
     map: Labyrinth2D,
-    rooms: Vec<Box<dyn genalgs::rooms::Room>>,
+    rooms: CompoundRoom,
     dimensions: Point,
+    dirty: bool,
 }
 
 impl MapGenerator2D {
@@ -44,8 +48,9 @@ impl MapGenerator2D {
     pub fn new(width: usize, height: usize) -> MapGenerator2D {
         MapGenerator2D {
             map: Labyrinth2D::new(width, height),
-            rooms: vec![],
+            rooms: CompoundRoom::new(),
             dimensions: Point::new(width, height),
+            dirty: false,
         }
     }
 
@@ -53,6 +58,27 @@ impl MapGenerator2D {
     /// Retrieves a reference to the internal [`Labyrinth2D`] of the Generator
     pub fn map(&self) -> &Labyrinth2D {
         &self.map
+    }
+
+    /// Retrieves a mutable reference to the internal [`Labyrinth2D`] of the Generator
+    pub fn map_mut(&mut self) -> &mut Labyrinth2D {
+        &mut self.map
+    }
+
+    pub fn map_iter_mut(&mut self) -> core::slice::IterMut<Tile> {
+        self.map.iter_mut()
+    }
+
+    pub fn connections(&self) -> &HashSet<Point> {
+        &self.rooms.connections
+    }
+
+    pub fn rooms(&self) -> &CompoundRoom {
+        &self.rooms
+    }
+
+    pub fn dimensions(&self) -> &Point {
+        &self.dimensions
     }
 
     // ----------------- Generation Methods -------------------------
@@ -80,11 +106,49 @@ impl MapGenerator2D {
     /// Resets the internal [`Labyrinth2D`] to a complely filled-in map
     pub fn flush_map(&mut self) {
         self.map = Labyrinth2D::new_from_dims(self.dimensions);
+        self.rooms = CompoundRoom::new();
+        self.dirty = true;
     }
 
     /// Resets the internal [`Labyrinth2D`] to an open map with walls
     pub fn walled_map(&mut self) {
         self.map = Labyrinth2D::new_walled_from_dims(self.dimensions);
+    }
+
+    /// adds a single room to the internal map
+    pub fn add_room<T: Room + 'static>(&mut self, room: T) {
+        self.rooms.rooms.push(Box::new(room));
+        self.dirty = true;
+    }
+
+    pub fn add_compound_room(&mut self, croom: CompoundRoom) {
+        for room in croom.rooms {
+            self.rooms.rooms.push(room);
+        }
+        for pt in croom.connections {
+            self.rooms.connections.insert(pt);
+        }
+    }
+
+    /// ataches a single room to the internal map
+    pub fn attach_room<T: Room + 'static>(&mut self, room: T, connection: Point) {
+        self.rooms.rooms.push(Box::new(room));
+        self.rooms.connections.insert(connection);
+        self.dirty = true;
+    }
+
+    /// flashes the contents of the rooms to the internal map,
+    /// but only if it's been updated since
+    pub fn update_rooms(&mut self) {
+        if self.dirty {
+            for room in &self.rooms.rooms {
+                for &floortile in room.floor().iter() {
+                    if self.map.in_bounds(floortile) {
+                        self.map.set_tile_at(floortile, Tile::floor());
+                    }
+                }
+            }
+        }
     }
 }
 

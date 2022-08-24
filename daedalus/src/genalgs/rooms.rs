@@ -42,8 +42,8 @@ impl PartialEq for dyn Room {
     }
 }
 pub trait RoomCollisions: Room {
-    fn collides_with<T: Room>(&self, other: &T) -> bool {
-        // Two rooms are disjoint if their borders do not touch the floor of
+    fn collides_with<T: RoomCollisions>(&self, other: &T) -> bool {
+        // Two rooms are disjoint if neither of their borders touch the floor of
         // the other room.
         !(self.floor().is_disjoint(&other.all_points())
             && self.all_points().is_disjoint(&other.floor()))
@@ -75,8 +75,8 @@ impl Room for RectRoom {
         let mut border = self.walls();
 
         // add corners
-        for x in [self.internal.x1 - 1, self.internal.x2 + 1] {
-            for y in [self.internal.y1 - 1, self.internal.y2 + 1] {
+        for x in [self.internal.x1 - 1, self.internal.x2] {
+            for y in [self.internal.y1 - 1, self.internal.y2] {
                 border.insert(Point::new(x, y));
             }
         }
@@ -89,13 +89,13 @@ impl Room for RectRoom {
         let mut border = HashSet::new();
 
         // add walls
-        for x in self.internal.x1..=self.internal.x2 {
+        for x in self.internal.x1..self.internal.x2 {
             border.insert(Point::new(x, self.internal.y1 - 1));
-            border.insert(Point::new(x, self.internal.y2 + 1));
+            border.insert(Point::new(x, self.internal.y2));
         }
-        for y in self.internal.y1..=self.internal.y2 {
+        for y in self.internal.y1..self.internal.y2 {
             border.insert(Point::new(self.internal.x1 - 1, y));
-            border.insert(Point::new(self.internal.x2 + 1, y));
+            border.insert(Point::new(self.internal.x2, y));
         }
 
         border

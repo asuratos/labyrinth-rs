@@ -8,6 +8,13 @@ pub struct CompoundRoom {
 }
 
 impl CompoundRoom {
+    pub fn new() -> CompoundRoom {
+        CompoundRoom {
+            rooms: vec![],
+            connections: HashSet::new(),
+        }
+    }
+
     pub fn from_room<T: Room + 'static>(room: T) -> CompoundRoom {
         CompoundRoom {
             rooms: vec![Box::new(room)],
@@ -15,7 +22,24 @@ impl CompoundRoom {
         }
     }
 
-    pub fn attach_room<T: RoomCollisions + 'static>(&mut self, mut room: T) -> bool {
+    pub fn find_and_attach_room<T: RoomCollisions + 'static>(&mut self, room: T) -> bool{
+        if let Some((room, conn)) = self.find_valid_attachment(room) {
+            self.attach_room(room, conn);
+            return true;
+        }
+        false
+    }
+
+    pub fn attach_room<T: RoomCollisions + 'static>(&mut self, room: T, connection: Point) -> bool {
+        if self.walls().contains(&connection) && !self.collides_with(&room) {
+            self.rooms.push(Box::new(room));
+            self.connections.insert(connection);
+            return true;
+        }
+        false
+    }
+
+    pub fn find_valid_attachment<T: RoomCollisions>(&mut self, mut room: T) -> Option<(T, Point)> {
         let attempts = 20;
         let mut room_found = false;
 
@@ -29,7 +53,7 @@ impl CompoundRoom {
         let walls = self.walls();
 
         // find a valid place to attach
-        'outer_loop: for _ in 0..attempts {
+        for _ in 0..attempts {
             // attachment point of new room + any wall of current room
             let idx = rng.gen_range(0..attach_points.len());
             let attach_point_new = attach_points.iter().nth(idx).unwrap().clone();
@@ -40,7 +64,7 @@ impl CompoundRoom {
             //bring the room to (0, 0) for correct transformations
             room.shift(attach_point_new * -1);
 
-            for _ in 0..5 {
+            for _ in 0..3 {
                 // TODO: randomize the transform here?
                 room.rotate_right();
 
@@ -48,11 +72,8 @@ impl CompoundRoom {
 
                 if !self.collides_with(&room) {
                     //if there's no collission with the rooms, we can end here
-                    self.rooms.push(Box::new(room));
-                    self.connections.insert(attach_point_old);
 
-                    room_found = true;
-                    break 'outer_loop;
+                    return Some((room, attach_point_old));
                 }
 
                 // back to (0, 0) for the next attempt
@@ -60,8 +81,7 @@ impl CompoundRoom {
             }
         }
 
-        // return a bool saying if we did or didn't find a place for the room
-        room_found
+        None
     }
 }
 
