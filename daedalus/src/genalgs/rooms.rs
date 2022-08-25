@@ -48,6 +48,10 @@ pub trait RoomCollisions: Room {
         !(self.floor().is_disjoint(&other.all_points())
             && self.all_points().is_disjoint(&other.floor()))
     }
+
+    fn connects_to<T: RoomCollisions>(&self, other: &T) -> bool {
+        !self.collides_with(other) && !(self.walls().is_disjoint(&other.walls()))
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -120,17 +124,17 @@ impl Room for RectRoom {
 
     fn mirror(&mut self) {
         let old = self.internal;
-        self.internal = Rect::with_exact(-old.x2, old.y1, -old.x1, old.y2);
+        self.internal = Rect::with_exact(-old.x2 + 1, old.y1, -old.x1 + 1, old.y2);
     }
 
     fn rotate_left(&mut self) {
         let old = self.internal;
-        self.internal = Rect::with_exact(old.y1, -old.x2, old.y2, -old.x1);
+        self.internal = Rect::with_exact(old.y1 + 1, -old.x2, old.y2 + 1, -old.x1);
     }
 
     fn rotate_right(&mut self) {
         let old = self.internal;
-        self.internal = Rect::with_exact(-old.y2, old.x1, -old.y1, old.x2);
+        self.internal = Rect::with_exact(-old.y2 + 1, old.x1, -old.y1 + 1, old.x2);
     }
 
     fn shift(&mut self, offset: Point) {
@@ -173,9 +177,9 @@ impl Hall {
 
     fn endpoint(&self) -> Point {
         let d: Point = if self.horizontal {
-            Point::new(0, self.length)
-        } else {
             Point::new(self.length, 0)
+        } else {
+            Point::new(0, self.length)
         };
 
         self.start + d
@@ -192,37 +196,23 @@ impl Room for Hall {
     }
 
     fn walls(&self) -> HashSet<Point> {
-        let end = self.endpoint();
-        let side_wall_starts: [Point; 2];
-        let start_wall: Point;
-        let end_wall: Point;
-
-        if self.horizontal {
-            side_wall_starts = [Point::new(0, 1), Point::new(0, -1)];
-            if self.length < 0 {
-                start_wall = Point::new(1, 0);
-                end_wall = Point::new(-1, 0);
-            } else {
-                start_wall = Point::new(-1, 0);
-                end_wall = Point::new(1, 0);
-            }
-        } else {
-            side_wall_starts = [Point::new(1, 0), Point::new(-1, 0)];
-            if self.length < 0 {
-                start_wall = Point::new(0, 1);
-                end_wall = Point::new(0, -1);
-            } else {
-                start_wall = Point::new(0, -1);
-                end_wall = Point::new(0, 1);
-            }
-        };
-
         let mut walls = HashSet::new();
-        for d in side_wall_starts {
-            walls.extend(line2d_bresenham(self.start + d, end + d).iter())
+
+        let neighbors = [
+            Point::new(1, 0),
+            Point::new(0, 1),
+            Point::new(-1, 0),
+            Point::new(0, -1),
+        ];
+
+        for pt in self.floor() {
+            for n in neighbors {
+                if !self.floor().contains(&(pt + n)) {
+                    walls.insert(pt + n);
+                }
+            }
         }
-        walls.insert(self.start + start_wall);
-        walls.insert(end + end_wall);
+
         walls
     }
 
@@ -290,7 +280,7 @@ impl Room for Hall {
 
 #[cfg(test)]
 mod tests {
-    use super::{RectRoom, Room};
+    use super::{Hall, RectRoom, Room};
 
     fn rectroom_is_valid(rm: &RectRoom) {
         assert!(rm.internal.x1 < rm.internal.x2);
@@ -309,6 +299,16 @@ mod tests {
     }
 
     #[test]
+    fn hall_stays_valid_after_left_rotation() {
+        let mut room = Hall::new_horizontal(5, 1);
+        for _ in 0..4 {
+            room.rotate_left();
+        }
+        // 4 rotations should always return to the original
+        assert_eq!(room, Hall::new_horizontal(5, 1));
+    }
+
+    #[test]
     fn rectroom_stays_valid_after_right_rotation() {
         let mut room = RectRoom::new(5, 5);
         for _ in 0..4 {
@@ -317,6 +317,16 @@ mod tests {
         }
         // 4 rotations should always return to the original
         assert_eq!(room, RectRoom::new(5, 5));
+    }
+
+    #[test]
+    fn hall_stays_valid_after_right_rotation() {
+        let mut room = Hall::new_horizontal(5, 1);
+        for _ in 0..4 {
+            room.rotate_right();
+        }
+        // 4 rotations should always return to the original
+        assert_eq!(room, Hall::new_horizontal(5, 1));
     }
 
     #[test]

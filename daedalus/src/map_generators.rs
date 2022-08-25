@@ -122,18 +122,20 @@ impl MapGenerator2D {
     }
 
     pub fn add_compound_room(&mut self, croom: CompoundRoom) {
-        for room in croom.rooms {
-            self.rooms.rooms.push(room);
-        }
-        for pt in croom.connections {
-            self.rooms.connections.insert(pt);
-        }
+        self.rooms = croom;
+        // for room in croom.rooms {
+        //     self.rooms.rooms.push(room);
+        // }
+        // for pt in croom.connections {
+        //     self.rooms.connections.insert(pt);
+        // }
     }
 
     /// ataches a single room to the internal map
-    pub fn attach_room<T: Room + 'static>(&mut self, room: T, connection: Point) {
-        self.rooms.rooms.push(Box::new(room));
-        self.rooms.connections.insert(connection);
+    pub fn attach_room<T: RoomCollisions + 'static>(&mut self, room: T, connection: Point) {
+        self.rooms.attach_room(room, connection);
+        //     push(Box::new(room));
+        // self.rooms.connections.insert(connection);
         self.dirty = true;
     }
 

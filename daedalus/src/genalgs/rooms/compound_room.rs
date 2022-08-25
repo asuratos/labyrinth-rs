@@ -22,16 +22,16 @@ impl CompoundRoom {
         }
     }
 
-    pub fn find_and_attach_room<T: RoomCollisions + 'static>(&mut self, room: T) -> bool {
-        if let Some((room, conn)) = self.find_valid_attachment(room) {
-            self.attach_room(room, conn);
-            return true;
-        }
-        false
-    }
+    // pub fn find_and_attach_room<T: RoomCollisions + 'static>(&mut self, room: T) -> bool {
+    //     if let Some((room, conn)) = self.find_valid_attachment(room) {
+    //         self.attach_room(room, conn);
+    //         return true;
+    //     }
+    //     false
+    // }
 
     pub fn attach_room<T: RoomCollisions + 'static>(&mut self, room: T, connection: Point) -> bool {
-        if self.walls().contains(&connection) && !self.collides_with(&room) {
+        if self.walls().contains(&connection) && self.connects_to(&room) {
             self.rooms.push(Box::new(room));
             self.connections.insert(connection);
             return true;
@@ -39,50 +39,50 @@ impl CompoundRoom {
         false
     }
 
-    pub fn find_valid_attachment<T: RoomCollisions>(&mut self, mut room: T) -> Option<(T, Point)> {
-        let attempts = 20;
-        let mut room_found = false;
+    // pub fn find_valid_attachment<T: RoomCollisions>(&mut self, mut room: T) -> Option<(T, Point)> {
+    //     let attempts = 20;
+    //     let mut room_found = false;
 
-        // TODO: Make this seedable
-        let mut rng = rand::thread_rng();
+    //     // TODO: Make this seedable
+    //     let mut rng = rand::thread_rng();
 
-        // get attachment points of new room
-        let attach_points = room.entries();
+    //     // get attachment points of new room
+    //     let attach_points = room.entries();
 
-        // get attachment points (walls) of current compound room
-        let walls = self.walls();
+    //     // get attachment points (walls) of current compound room
+    //     let walls = self.walls();
 
-        // find a valid place to attach
-        for _ in 0..attempts {
-            // attachment point of new room + any wall of current room
-            let idx = rng.gen_range(0..attach_points.len());
-            let attach_point_new = attach_points.iter().nth(idx).unwrap().clone();
+    //     // find a valid place to attach
+    //     for _ in 0..attempts {
+    //         // attachment point of new room + any wall of current room
+    //         let idx = rng.gen_range(0..attach_points.len());
+    //         let attach_point_new = attach_points.iter().nth(idx).unwrap().clone();
 
-            let idx = rng.gen_range(0..walls.len());
-            let attach_point_old = walls.iter().nth(idx).unwrap().clone();
+    //         let idx = rng.gen_range(0..walls.len());
+    //         let attach_point_old = walls.iter().nth(idx).unwrap().clone();
 
-            //bring the room to (0, 0) for correct transformations
-            room.shift(attach_point_new * -1);
+    //         //bring the room to (0, 0) for correct transformations
+    //         room.shift(attach_point_new * -1);
 
-            for _ in 0..3 {
-                // TODO: randomize the transform here?
-                room.rotate_right();
+    //         for _ in 0..3 {
+    //             // TODO: randomize the transform here?
+    //             room.rotate_right();
 
-                room.shift(attach_point_old);
+    //             room.shift(attach_point_old);
 
-                if !self.collides_with(&room) {
-                    //if there's no collission with the rooms, we can end here
+    //             if !self.collides_with(&room) {
+    //                 //if there's no collission with the rooms, we can end here
 
-                    return Some((room, attach_point_old));
-                }
+    //                 return Some((room, attach_point_old));
+    //             }
 
-                // back to (0, 0) for the next attempt
-                room.shift(attach_point_old * -1);
-            }
-        }
+    //             // back to (0, 0) for the next attempt
+    //             room.shift(attach_point_old * -1);
+    //         }
+    //     }
 
-        None
-    }
+    //     None
+    // }
 }
 
 impl Room for CompoundRoom {

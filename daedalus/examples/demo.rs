@@ -13,7 +13,7 @@ impl GameState for State {
     fn tick(&mut self, ctx: &mut BTerm) {
         // draw current map
         draw_map(&self.mapbuilder.map(), ctx);
-        draw_debug(&self.mapbuilder, ctx);
+        // draw_debug(&self.mapbuilder, ctx);
         draw_doors(&self.mapbuilder, ctx);
         draw_panel(ctx);
 
@@ -80,6 +80,15 @@ fn draw_debug(mapgen: &MapGenerator2D, ctx: &mut BTerm) {
             to_cp437(' '),
         );
     }
+    for pt in mapgen.rooms().entries() {
+        ctx.set(
+            pt.x,
+            pt.y,
+            RGBA::named(WHITE),
+            RGBA::named(GREEN),
+            to_cp437(' '),
+        );
+    }
 }
 
 fn draw_doors(mapgen: &MapGenerator2D, ctx: &mut BTerm) {
@@ -105,7 +114,7 @@ fn draw_tile(pt: Point, kind: &str, ctx: &mut BTerm) {
     let x = pt.x;
     let y = pt.y;
     let (glyph, fg, bg) = match kind {
-        "wall" => ('#', RGBA::named(WHITE), RGBA::named(BLACK)),
+        "wall" => ('#', RGBA::named(GRAY), RGBA::named(BLACK)),
         "floor" => (' ', RGBA::named(GRAY), RGBA::named(BLACK)),
         "water" => ('~', RGBA::named(LIGHT_BLUE), RGBA::named(BLUE)),
         "lava" => ('~', RGBA::named(ORANGE), RGBA::named(YELLOW)),
@@ -124,12 +133,6 @@ fn main() -> BError {
         .build()?;
 
     let mut mapbuilder = MapGenerator2D::new(50, 50);
-
-    // let mut firstroom = RectRoom::new(5, 5);
-    // firstroom.shift((*mapbuilder.dimensions() / 2) - Point::new(2, 2));
-
-    // mapbuilder.add_room(firstroom);
-    // mapbuilder.update_rooms();
 
     let gs: State = State { mapbuilder };
 
