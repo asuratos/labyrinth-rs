@@ -121,6 +121,10 @@ impl MapGenerator2D {
         self.dirty = true;
     }
 
+    pub fn extend_rooms(&mut self, newrooms: Vec<Box<dyn Room>>) {
+        self.rooms.rooms.extend(newrooms);
+        self.dirty = true;
+    }
     pub fn add_compound_room(&mut self, croom: CompoundRoom) {
         self.rooms = croom;
         // for room in croom.rooms {

@@ -7,13 +7,19 @@ use labyrinth_map::prelude::*;
 
 struct State {
     mapbuilder: MapGenerator2D,
+    debug: bool,
 }
 
 impl GameState for State {
     fn tick(&mut self, ctx: &mut BTerm) {
         // draw current map
+        ctx.cls();
+
         draw_map(&self.mapbuilder.map(), ctx);
-        // draw_debug(&self.mapbuilder, ctx);
+        if self.debug {
+            draw_debug(&self.mapbuilder, ctx);
+        }
+        draw_center(ctx);
         draw_doors(&self.mapbuilder, ctx);
         draw_panel(ctx);
 
@@ -43,11 +49,55 @@ fn process_character(gs: &mut State, c: char) {
         }
         'r' => { // apply just one room here
         }
+        'd' => {
+            gs.debug = !gs.debug;
+        }
         '1' => {
             gs.mapbuilder.generate(FloorGenAlg::Basic);
         }
+        '0' => {
+            generate_rooms_debug(gs);
+        }
         _ => {}
     }
+}
+
+fn generate_rooms_debug(gs: &mut State) {
+    // let map = gs.mapbuilder.map();
+    gs.mapbuilder.flush_map();
+
+    let mut rooms: Vec<Box<dyn Room>> = vec![];
+
+    let mut room1 = RectRoom::new(3, 5);
+    room1.shift(Point::new(10, 10));
+    println!("Room1 entries: {:?}", room1.entries());
+    println!("Room1 center: {:?}", room1.center());
+    rooms.push(Box::new(room1));
+
+    let mut room2 = RectRoom::new(3, 5);
+    room2.rotate_right();
+    room2.shift(Point::new(20, 10));
+    rooms.push(Box::new(room2));
+    let mut room3 = RectRoom::new(3, 5);
+    room3.rotate_right();
+    room3.rotate_right();
+    room3.shift(Point::new(30, 10));
+    rooms.push(Box::new(room3));
+    let mut room4 = RectRoom::new(3, 5);
+    room4.rotate_right();
+    room4.rotate_right();
+    room4.rotate_right();
+    room4.shift(Point::new(40, 10));
+    rooms.push(Box::new(room4));
+
+    // for r in rooms {
+    //     gs.mapbuilder.add_rooms(*r);
+    // }
+    gs.mapbuilder.extend_rooms(rooms);
+}
+
+fn draw_center(ctx: &mut BTerm) {
+    ctx.set(25, 25, RGBA::named(WHITE), RGBA::named(BLUE), to_cp437(' '));
 }
 
 fn draw_panel(ctx: &mut BTerm) {
@@ -57,6 +107,7 @@ fn draw_panel(ctx: &mut BTerm) {
     ctx.print(52, 5, "n: new (filled) map");
     ctx.print(52, 6, "w: new (walled) map");
     ctx.print(52, 7, "r: add room");
+    ctx.print(52, 8, "d: toggle debug");
 
     ctx.print(52, 15, "1: generate basic map");
 }
@@ -134,7 +185,10 @@ fn main() -> BError {
 
     let mut mapbuilder = MapGenerator2D::new(50, 50);
 
-    let gs: State = State { mapbuilder };
+    let gs: State = State {
+        mapbuilder,
+        debug: false,
+    };
 
     main_loop(context, gs)
 }

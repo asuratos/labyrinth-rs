@@ -69,12 +69,13 @@ fn room_in_bounds<T: Room>(mapgen: &mut MapGenerator2D, room: &T) -> bool {
     room.floor().iter().all(|&pt| mapgen.map().in_bounds(pt))
 }
 
-fn fit_room<T: RoomCollisions>(
+fn fit_room<T: RoomCollisions, U: Rng>(
     mapgen: &mut MapGenerator2D,
     rooms: &CompoundRoom,
     mut newroom: T,
+    rng: &mut U,
 ) -> Option<(T, Point)> {
-    let attempts = 5;
+    let attempts = 10;
 
     // TODO: Make this seedable
     let mut rng = rand::thread_rng();
@@ -132,24 +133,26 @@ pub fn build_rooms_and_corridors(mapgen: &mut MapGenerator2D) {
 
     // mapgen.add_room(firstroom);
 
+    let mut rng = rand::thread_rng();
     for _ in 0..n {
+        // while true { // version where it tries to fill the room
         // generate a rectangle room or a corridor
-        let mut rng = rand::thread_rng();
-        let newroom = if rng.gen::<f32>() > 0.5 {
-            CompoundRoom::from_room(Hall::new_horizontal(5, 1))
-        } else {
-            CompoundRoom::from_room(RectRoom::new(3, 3))
-        };
+        // let newroom = if rng.gen::<f32>() > 0.5 {
+        //     CompoundRoom::from_room(Hall::new_horizontal(5, 1))
+        // } else {
+        //     CompoundRoom::from_room(RectRoom::new(3, 3))
+        // };
 
-        // let newroom = CompoundRoom::from_room(RectRoom::new(3, 3));
-        // newroom.find_and_attach_room(Hall::new_horizontal(3, 3));
-        // if let Some((hall, conn)) = newroom.find_valid_attachment(Hall::new_horizontal(1, 1)) {
-        //     newroom.attach_room(hall, conn);
-        // }
+        let w = rng.gen_range(3..11);
+        let h = rng.gen_range(3..7);
+
+        let newroom = CompoundRoom::from_room(RectRoom::new(w, h));
 
         // try to attach each room to the map
-        if let Some((newroom, connection)) = fit_room(mapgen, &rooms, newroom) {
+        if let Some((newroom, connection)) = fit_room(mapgen, &rooms, newroom, &mut rng) {
             rooms.attach_room(newroom, connection);
+        } else {
+            break;
         }
     }
 

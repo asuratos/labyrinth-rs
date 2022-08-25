@@ -66,6 +66,10 @@ impl RectRoom {
             internal: Rect::with_size(0, 0, w, h),
         }
     }
+
+    pub fn center(&self) -> Point {
+        self.internal.center()
+    }
 }
 
 impl RoomCollisions for RectRoom {}
@@ -114,8 +118,8 @@ impl Room for RectRoom {
                 .iter()
                 .filter(|&pt| {
                     pt.x == self.internal.center().x
-                        || pt.x == self.internal.center().y
-                        || pt.y == self.internal.center().x
+                        // || pt.x == self.internal.center().y
+                        // || pt.y == self.internal.center().x
                         || pt.y == self.internal.center().y
                 })
                 .cloned(),
