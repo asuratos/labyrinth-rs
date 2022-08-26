@@ -52,21 +52,21 @@ fn apply_room_to_map<T: Room + ?Sized>(map: &mut Labyrinth2D, room: &T) {
     }
 }
 
-fn apply_compound_room_to_map(map: &mut Labyrinth2D, croom: CompoundRoom) {
-    for room in croom.rooms {
-        apply_room_to_map(map, &(*room));
-    }
+// fn apply_compound_room_to_map(map: &mut Labyrinth2D, croom: CompoundRoom) {
+//     for room in croom.rooms_mut() {
+//         apply_room_to_map(map, &(*room));
+//     }
 
-    for door in croom.connections {
-        // TODO: door kind of tile?
-        if map.in_bounds(door) {
-            map.set_tile_at(door, Tile::floor());
-        }
-    }
-}
+//     for door in croom.connections {
+//         // TODO: door kind of tile?
+//         if map.in_bounds(door) {
+//             map.set_tile_at(door, Tile::floor());
+//         }
+//     }
+// }
 
 fn room_in_bounds<T: Room>(mapgen: &mut MapGenerator2D, room: &T) -> bool {
-    room.floor().iter().all(|&pt| mapgen.map().in_bounds(pt))
+    room.walls().iter().all(|&pt| mapgen.map().in_bounds(pt))
 }
 
 fn fit_room<T: RoomCollisions, U: Rng>(
@@ -134,7 +134,7 @@ pub fn build_rooms_and_corridors(mapgen: &mut MapGenerator2D) {
     // mapgen.add_room(firstroom);
 
     let mut rng = rand::thread_rng();
-    for _ in 0..n {
+    while rooms.count() <= n {
         // while true { // version where it tries to fill the room
         // generate a rectangle room or a corridor
         // let newroom = if rng.gen::<f32>() > 0.5 {

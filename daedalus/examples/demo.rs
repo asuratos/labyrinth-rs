@@ -16,12 +16,12 @@ impl GameState for State {
         ctx.cls();
 
         draw_map(&self.mapbuilder.map(), ctx);
-        if self.debug {
-            draw_debug(&self.mapbuilder, ctx);
-        }
         draw_center(ctx);
         draw_doors(&self.mapbuilder, ctx);
         draw_panel(ctx);
+        if self.debug {
+            draw_debug(&self.mapbuilder, ctx);
+        }
 
         // process user input
         let mut input = INPUT.lock();
@@ -101,7 +101,7 @@ fn draw_center(ctx: &mut BTerm) {
 }
 
 fn draw_panel(ctx: &mut BTerm) {
-    ctx.draw_hollow_box_double(51, 1, 28, 48, RGBA::named(WHITE), RGBA::new());
+    ctx.draw_hollow_box_double(50, 1, 28, 48, RGBA::named(WHITE), RGBA::new());
 
     ctx.print(52, 4, "Controls");
     ctx.print(52, 5, "n: new (filled) map");
@@ -139,6 +139,24 @@ fn draw_debug(mapgen: &MapGenerator2D, ctx: &mut BTerm) {
             RGBA::named(GREEN),
             to_cp437(' '),
         );
+    }
+
+    // print each room number
+    for (i, room) in mapgen.rooms().rooms().iter().enumerate() {
+        // println!("Room number: {:?}", i);
+        for pt in room.floor() {
+            let val = f32::powf(0.9, i as f32);
+            ctx.set(
+                pt.x,
+                pt.y,
+                RGBA::from_f32(val, val, val, 1.0),
+                RGBA::named(BLACK),
+                to_cp437(
+                    char::from_digit((i as u32) % 16, 16)
+                        .expect(&format!("from_digit failed with i = {:?}", i)),
+                ),
+            );
+        }
     }
 }
 

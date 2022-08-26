@@ -3,7 +3,7 @@ use rand::Rng;
 
 #[derive(Debug, PartialEq)]
 pub struct CompoundRoom {
-    pub rooms: Vec<Box<dyn Room>>,
+    rooms: Vec<Box<dyn Room>>,
     pub connections: HashSet<Point>,
 }
 
@@ -37,6 +37,18 @@ impl CompoundRoom {
             return true;
         }
         false
+    }
+
+    pub fn count(&self) -> usize {
+        self.rooms.len()
+    }
+
+    pub fn rooms(&self) -> &Vec<Box<dyn Room>> {
+        &self.rooms
+    }
+
+    pub fn rooms_mut(&mut self) -> &mut Vec<Box<dyn Room>> {
+        &mut self.rooms
     }
 
     // pub fn find_valid_attachment<T: RoomCollisions>(&mut self, mut room: T) -> Option<(T, Point)> {

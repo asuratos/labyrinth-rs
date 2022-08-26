@@ -117,14 +117,15 @@ impl MapGenerator2D {
 
     /// adds a single room to the internal map
     pub fn add_room<T: Room + 'static>(&mut self, room: T) {
-        self.rooms.rooms.push(Box::new(room));
+        self.rooms.rooms_mut().push(Box::new(room));
         self.dirty = true;
     }
 
     pub fn extend_rooms(&mut self, newrooms: Vec<Box<dyn Room>>) {
-        self.rooms.rooms.extend(newrooms);
+        self.rooms.rooms_mut().extend(newrooms);
         self.dirty = true;
     }
+
     pub fn add_compound_room(&mut self, croom: CompoundRoom) {
         self.rooms = croom;
         // for room in croom.rooms {
@@ -147,7 +148,7 @@ impl MapGenerator2D {
     /// but only if it's been updated since
     pub fn update_rooms(&mut self) {
         if self.dirty {
-            for room in &self.rooms.rooms {
+            for room in self.rooms.rooms() {
                 for &floortile in room.floor().iter() {
                     if self.map.in_bounds(floortile) {
                         self.map.set_tile_at(floortile, Tile::floor());
