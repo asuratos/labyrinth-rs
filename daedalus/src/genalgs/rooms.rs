@@ -11,8 +11,8 @@ pub trait Room {
     fn floor(&self) -> HashSet<Point>;
     fn walls(&self) -> HashSet<Point>;
     fn borders(&self) -> HashSet<Point>;
-    // TODO: add possible door locations
-    fn entries(&self) -> HashSet<Point>;
+
+    fn entries(&mut self) -> HashSet<Point>;
 
     fn all_points(&self) -> HashSet<Point> {
         let mut all = self.floor();
@@ -57,6 +57,7 @@ pub trait RoomCollisions: Room {
 #[derive(Debug, PartialEq)]
 pub struct RectRoom {
     internal: Rect,
+    entries: Option<HashSet<Point>>,
 }
 
 impl RectRoom {
@@ -64,6 +65,7 @@ impl RectRoom {
         // TODO: add checks to make sure w, h are > 0
         RectRoom {
             internal: Rect::with_size(0, 0, w, h),
+            entries: None,
         }
     }
 
@@ -109,8 +111,12 @@ impl Room for RectRoom {
         border
     }
 
-    fn entries(&self) -> HashSet<Point> {
+    fn entries(&mut self) -> HashSet<Point> {
         // TODO: Randomize
+
+        if let Some(entries) = &self.entries {
+            return entries.clone();
+        }
 
         // for now just get the center walls
         HashSet::from_iter(
@@ -158,6 +164,7 @@ pub struct Hall {
     horizontal: bool,
     length: i32,
     thickness: i32, // TODO: Thickness doesn't do anything atm
+    entries: Option<HashSet<Point>>,
 }
 
 impl Hall {
@@ -167,6 +174,7 @@ impl Hall {
             horizontal: true,
             length,
             thickness,
+            entries: None,
         }
     }
 
@@ -176,6 +184,7 @@ impl Hall {
             horizontal: false,
             length,
             thickness,
+            entries: None,
         }
     }
 
@@ -239,7 +248,11 @@ impl Room for Hall {
         borders
     }
 
-    fn entries(&self) -> HashSet<Point> {
+    fn entries(&mut self) -> HashSet<Point> {
+        if let Some(entries) = &self.entries {
+            return entries.clone();
+        }
+
         let mut entries = HashSet::new();
         let multiplier = if self.length <= 0 { -1 } else { 1 };
         if self.horizontal {

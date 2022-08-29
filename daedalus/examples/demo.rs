@@ -20,7 +20,7 @@ impl GameState for State {
         draw_doors(&self.mapbuilder, ctx);
         draw_panel(ctx);
         if self.debug {
-            draw_debug(&self.mapbuilder, ctx);
+            draw_debug(&mut self.mapbuilder, ctx);
         }
 
         // process user input
@@ -112,7 +112,7 @@ fn draw_panel(ctx: &mut BTerm) {
     ctx.print(52, 15, "1: generate basic map");
 }
 
-fn draw_debug(mapgen: &MapGenerator2D, ctx: &mut BTerm) {
+fn draw_debug(mapgen: &mut MapGenerator2D, ctx: &mut BTerm) {
     for pt in mapgen.rooms().borders() {
         ctx.set(
             pt.x,
@@ -131,7 +131,7 @@ fn draw_debug(mapgen: &MapGenerator2D, ctx: &mut BTerm) {
             to_cp437(' '),
         );
     }
-    for pt in mapgen.rooms().entries() {
+    for pt in mapgen.rooms_mut().entries() {
         ctx.set(
             pt.x,
             pt.y,

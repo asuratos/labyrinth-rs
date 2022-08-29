@@ -132,11 +132,16 @@ impl Room for CompoundRoom {
         })
     }
 
-    fn entries(&self) -> HashSet<Point> {
-        self.rooms.iter().fold(HashSet::new(), |mut acc, room| {
-            acc.extend(room.entries());
+    fn entries(&mut self) -> HashSet<Point> {
+        let inner_entries = self.rooms.iter_mut().fold(HashSet::new(), |mut acc, room| {
+            acc.extend(&room.entries());
             acc
-        })
+        });
+
+        inner_entries
+            .difference(&self.connections)
+            .cloned()
+            .collect()
     }
 
     fn point_in_room(&self, pt: Point) -> bool {

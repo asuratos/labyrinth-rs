@@ -77,6 +77,10 @@ impl MapGenerator2D {
         &self.rooms
     }
 
+    pub fn rooms_mut(&mut self) -> &mut CompoundRoom {
+        &mut self.rooms
+    }
+
     pub fn dimensions(&self) -> &Point {
         &self.dimensions
     }
